@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>eDocument Generator | NewTech Home Solutions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="assets/logo.png" alt="NewTech Home Solutions" />
+        <div>
+          <strong>NewTech</strong>
+          <span>eDocument Generator</span>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Document sections">
+        <button class="nav-btn active" data-tab="quotations" type="button">Quotations</button>
+        <button class="nav-btn" data-tab="invoices" type="button">Tax Invoices</button>
+        <button class="nav-btn" data-tab="warrantyCards" type="button">Warranty Cards</button>
+      </nav>
+      <div class="transfer-box">
+        <strong>Transfer</strong>
+        <p>Export or import JSON records when moving this module into eDocument.</p>
+        <div class="stack">
+          <button class="btn btn-secondary" id="exportBtn" type="button">Export JSON</button>
+          <label class="btn btn-secondary file-btn">
+            Import JSON
+            <input id="importInput" type="file" accept="application/json,.json" />
+          </label>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Standalone Project</p>
+          <h1 id="pageTitle">Document Generator</h1>
+        </div>
+        <div class="top-actions">
+          <button class="btn btn-secondary" id="backBtn" type="button" hidden>Back</button>
+          <button class="btn btn-primary" id="newBtn" type="button">New Quotation</button>
+        </div>
+      </header>
+
+      <section id="content" class="content" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
