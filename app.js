@@ -4,40 +4,51 @@ const COMPANY_PROFILE = {
   name: "NewTech Home Solutions",
   tagline: "Supreme Insect Protection Systems",
   logo: "assets/logo.png",
-  officeAddress: "NewTech Home Solutions",
-  address: "Delhi NCR, India",
+  stamp: "assets/company-stamp.png",
+  address: "F-1, Hari Nagar II, Near Eco Park & Lohia Pull, Badarpur, New Delhi - 110044",
+  officeAddress: "D-4/2, Okhla Industrial Area, Phase-1, New Delhi - 110020",
   email: "homesolutionsnewtech@gmail.com",
-  website: "www.newtechhomesolutions.in",
-  contacts: ["+91 9876543210"],
-  gstNumber: "",
+  website: "https://newtechhomesolutions.in",
+  contacts: ["+91 9315739299", "+91 9354831931"],
+  gstNumber: "07AATFN5177C1ZY",
   bankDetails: {
     accountName: "NewTech Home Solutions",
-    bankName: "",
-    accountNo: "",
-    ifsc: ""
+    bankName: "AXIS BANK",
+    accountNo: "922020011452055",
+    ifsc: "UTIB0000552"
   },
   quotationTerms: [
-    "Warranty for the period of 5 years for manufacturing defects except net, from date of delivery.",
-    "Nominal amount of Rs. 500 would be charged as technician visit during warranty period.",
-    "Transportation, installation and taxes are charged as mentioned in this document.",
-    "All disputes are subject to Delhi jurisdiction."
+    "Minimum Chargeable area is 1.02 square meter or 11 Sq.Ft. for all products.",
+    "50% advance to be paid along with order, balance after installation.",
+    "Cheques & NEFT to be issued in favor of NewTech Home Solutions.",
+    "Bank Details - AXIS BANK (IFSC - UTIB0000552) A/c No. 922020011452055",
+    "Products once produced will neither be cancelled or exchanged or rectified.",
+    "Calculation of Area of all products will be in SLAB of 6\" for both Width & Height.",
+    "Warranty for the period of 5 Years for Manufacturing defect except Net, from date of delivery.",
+    "5 Years Guarantee of Mesh for Natural climate wear-tear only.",
+    "All disputes subject to Delhi Jurisdiction."
   ],
   invoiceTerms: [
-    "Goods once sold will not be taken back.",
-    "Warranty for the period of 5 years for manufacturing defects except net, for pleated mesh only.",
-    "Nominal amount of Rs. 500 would be charged as technician visit during warranty period.",
-    "All disputes are subject to Delhi jurisdiction."
+    "Cheques & NEFT to be issued in favor of NewTech Home Solutions.",
+    "Products once produced will neither be cancelled or exchanged or rectified.",
+    "Bank Details - AXIS BANK (IFSC - UTIB0000552) A/c No. 922020011452055",
+    "Warranty for the period of 5 years for Manufacturing defect except Net, (For Pleated Mesh Only).",
+    "Nominal amount of Rs. 500/- would be charged as technician visit, during warranty period.",
+    "24% interest would be charged extra for delay payment.",
+    "All disputes subject to Delhi Jurisdiction."
   ],
   warrantyTerms: [
-    "Warranty card covers only the actual user.",
-    "Warranty card is valid for a period of 60 months from the date of installation.",
-    "Guarantee of mesh/honeycomb is for natural climate wear and tear only.",
-    "Warranty card will be issued only after clearance of total payments.",
-    "Warranty card must be signed and stamped with company seal.",
-    "Replacement for malfunction due to faulty usage would be chargeable as per value.",
-    "Cut and damage to mesh/honeycomb is not covered under warranty.",
-    "Original warranty card soft copy has to be produced to avail warranty.",
-    "All disputes are subject to Delhi jurisdiction."
+    "Warranty Card covers only the actual user.",
+    "Warranty Card is valid for a period of 60 months from the date of installation.",
+    "Guarantee of Mesh/Honeycomb for a period of 60 months for natural climate wear tear only.",
+    "Warranty Card will be issued only after clearance of total payments.",
+    "Warranty Card must be signed and stamped with company seal.",
+    "NewTech Home Solutions will replace all spare parts and malfunctioning due to manufacturing defects.",
+    "Replacement for malfunction due to faulty usage would be chargeable as per their value.",
+    "Nominal Amount of Rs.500/- would be chargeable as service charge for technician visit.",
+    "Cut and damage to Mesh/Honeycomb is not covered under warranty.",
+    "Original warranty card (soft copy) has to be produced to avail warranty.",
+    "All disputes are subject to Delhi Jurisdiction."
   ]
 };
 
@@ -104,6 +115,7 @@ let state = {
 
 let db = loadStore();
 let logoDataUrlPromise = null;
+let stampDataUrlPromise = null;
 
 const contentEl = document.getElementById("content");
 const pageTitleEl = document.getElementById("pageTitle");
@@ -351,6 +363,10 @@ function renderCommercialEditor(kind, id) {
           <div class="field"><label>GST Number</label><input name="gstNo" value="${escapeAttr(record.customerDetails.gstNo || "")}"></div>
           <div class="field"><label>City</label><input name="city" value="${escapeAttr(record.customerDetails.city)}"></div>
           <div class="field"><label>State</label><input name="state" value="${escapeAttr(record.customerDetails.state)}"></div>
+          <div class="field"><label>Country</label><input name="country" value="${escapeAttr(record.customerDetails.country || "India")}"></div>
+          ${isInvoice
+            ? `<div class="field"><label>Reference Quotation</label><input name="referenceNumber" value="${escapeAttr(record.referenceNumber || "")}"></div>`
+            : `<div class="field"><label>Installation Timeline</label><input name="installationTime" value="${escapeAttr(record.customerDetails.installationTime || "Within 4 working days")}"></div>`}
           <div class="field full"><label>Installation Address</label><textarea name="address">${escapeHtml(record.customerDetails.installationAddress)}</textarea></div>
           <div class="field full"><label>Notes</label><textarea name="notes">${escapeHtml(record.customerDetails.notes)}</textarea></div>
         </div>
@@ -481,7 +497,8 @@ function commercialFromForm() {
       gstNo: sanitize(form.elements.gstNo.value),
       city: sanitize(form.elements.city.value),
       state: sanitize(form.elements.state.value),
-      country: "India",
+      country: sanitize(form.elements.country.value) || "India",
+      installationTime: kind === "quotations" ? sanitize(form.elements.installationTime.value) : "",
       installationAddress: sanitize(form.elements.address.value),
       notes: sanitize(form.elements.notes.value)
     },
@@ -499,6 +516,7 @@ function commercialFromForm() {
 
   if (kind === "invoices") {
     doc.hsnSac = sanitize(form.elements.hsnSac.value || "7314");
+    doc.referenceNumber = sanitize(form.elements.referenceNumber.value);
   }
 
   return calculateCommercial(kind, doc);
@@ -591,6 +609,9 @@ function renderWarrantyEditor(id) {
           <div class="field"><label>Customer Name</label><input name="customerName" value="${escapeAttr(record.customerDetails.name)}" required></div>
           <div class="field"><label>Phone Number</label><input name="phone" value="${escapeAttr(record.customerDetails.phone)}"></div>
           <div class="field"><label>Email</label><input name="email" type="email" value="${escapeAttr(record.customerDetails.email)}"></div>
+          <div class="field"><label>City</label><input name="city" value="${escapeAttr(record.customerDetails.city || "")}"></div>
+          <div class="field"><label>State</label><input name="state" value="${escapeAttr(record.customerDetails.state || "")}"></div>
+          <div class="field"><label>Country</label><input name="country" value="${escapeAttr(record.customerDetails.country || "India")}"></div>
           <div class="field"><label>Product Purchased</label><input name="productPurchased" value="${escapeAttr(record.productPurchased)}"></div>
           <div class="field"><label>Order / Invoice No.</label><input name="invoiceNo" value="${escapeAttr(record.invoiceNo || "")}"></div>
           <div class="field"><label>Installed By</label><input name="installedBy" value="${escapeAttr(record.installedBy)}"></div>
@@ -624,7 +645,9 @@ function warrantyFromForm() {
       name: sanitize(form.elements.customerName.value),
       phone: sanitize(form.elements.phone.value),
       email: sanitize(form.elements.email.value),
-      country: "India",
+      city: sanitize(form.elements.city.value),
+      state: sanitize(form.elements.state.value),
+      country: sanitize(form.elements.country.value) || "India",
       installationAddress: sanitize(form.elements.address.value)
     },
     customerName: sanitize(form.elements.customerName.value),
@@ -834,6 +857,7 @@ function printableHtml(kind, sourceRecord) {
       <tbody>
         <tr><th>Customer's Name</th><td>${escapeHtml(customer.name || record.customerName || "")}</td></tr>
         <tr><th>Address</th><td>${escapeHtml(customer.installationAddress || "")}</td></tr>
+        <tr><th>City / State</th><td>${escapeHtml([customer.city, customer.state, customer.country].filter(Boolean).join(", "))}</td></tr>
         <tr><th>Mobile No.</th><td>${escapeHtml(customer.phone || record.phone || "")}</td></tr>
         <tr><th>E-mail</th><td>${escapeHtml(customer.email || record.email || "")}</td></tr>
         <tr><th>Product Purchased</th><td>${escapeHtml(record.productPurchased || "")}</td></tr>
@@ -850,32 +874,48 @@ function printableHtml(kind, sourceRecord) {
   <meta charset="UTF-8">
   <title>${escapeHtml(title)} ${escapeHtml(number)}</title>
   <style>
-    body{font-family:Arial,sans-serif;color:#111827;margin:24px;font-size:12px}
-    .header{text-align:center;border-bottom:1px solid #111827;padding-bottom:10px;margin-bottom:14px}
-    .header img{height:52px;object-fit:contain;margin-bottom:6px}
+    :root{--navy:#1e3a8a;--orange:#f97316;--sky:#eff6ff;--peach:#fff7ed;--line:#bfdbfe;--ink:#0f172a}
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;color:var(--ink);margin:24px;font-size:12px}
+    .title-bar{background:var(--navy);color:#fff;text-align:center;padding:9px;font-size:16px;font-weight:700;border-bottom:4px solid var(--orange)}
+    .header{text-align:center;border-bottom:3px solid var(--orange);padding:10px 0;margin-bottom:12px}
+    .header img{height:58px;max-width:170px;object-fit:contain;float:left}
+    .header::after{content:"";display:block;clear:both}
+    .company-name{color:var(--navy);font-size:20px;font-weight:700;margin-top:2px}
+    .tagline{color:var(--orange);font-weight:700;margin:3px 0 8px}
+    .company-details{background:var(--sky);border:1px solid var(--line);padding:7px;border-radius:4px;line-height:1.5}
     h1{font-size:18px;margin:0 0 8px}
     h2{font-size:14px;margin:18px 0 8px}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
-    .box{border:1px solid #111827;padding:10px;min-height:82px}
+    .box{border:1px solid var(--line);padding:10px;min-height:82px;background:var(--sky)}
+    .box:nth-child(2){background:var(--peach)}
     table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{border:1px solid #111827;padding:6px;text-align:left;vertical-align:top}
-    th{font-weight:700;background:#f3f4f6}
+    th,td{border:1px solid var(--line);padding:6px;text-align:left;vertical-align:top}
+    thead th{font-weight:700;background:var(--navy);color:#fff}
+    tbody th{font-weight:700;background:var(--sky)}
     .totals-table{margin-left:auto;width:340px}
+    .totals-table tr:last-child th,.totals-table tr:last-child td{background:var(--orange);color:#fff;font-weight:700}
+    .terms{background:var(--peach);border:1px solid var(--orange);padding:12px 12px 8px 30px}
     .terms li{margin-bottom:4px}
-    .signature{text-align:right;margin-top:36px}
+    .signature{text-align:right;margin-top:36px;min-height:92px}
+    .signature .stamp{display:block;width:118px;height:auto;margin:6px 0 0 auto}
     @media print{body{margin:12mm}.no-print{display:none}}
   </style>
 </head>
 <body>
   <button class="no-print" onclick="window.print()">Print / Save as PDF</button>
+  <div class="title-bar">${escapeHtml(title)}</div>
   <div class="header">
     <img src="${escapeAttr(COMPANY_PROFILE.logo)}" alt="">
-    <h1>${escapeHtml(COMPANY_PROFILE.name)}</h1>
-    <div>${escapeHtml(COMPANY_PROFILE.tagline)}</div>
-    <div>${escapeHtml(COMPANY_PROFILE.address)} | ${escapeHtml(COMPANY_PROFILE.email)} | ${escapeHtml(COMPANY_PROFILE.website)}</div>
-    <div>${escapeHtml(COMPANY_PROFILE.contacts.join(", "))}</div>
+    <div class="company-name">${escapeHtml(COMPANY_PROFILE.name.toUpperCase())}</div>
+    <div class="tagline">${escapeHtml(COMPANY_PROFILE.tagline)}</div>
+    <div class="company-details">
+      Office: ${escapeHtml(COMPANY_PROFILE.officeAddress)}<br>
+      Factory: ${escapeHtml(COMPANY_PROFILE.address)}<br>
+      ${escapeHtml(COMPANY_PROFILE.email)} | ${escapeHtml(COMPANY_PROFILE.website)}<br>
+      ${escapeHtml(COMPANY_PROFILE.contacts.join(", "))} | GST: ${escapeHtml(COMPANY_PROFILE.gstNumber)}
+    </div>
   </div>
-  <h1>${escapeHtml(title)}</h1>
   <div class="grid">
     <div class="box">
       <strong>To</strong><br>
@@ -887,6 +927,8 @@ function printableHtml(kind, sourceRecord) {
     <div class="box">
       <strong>No.:</strong> ${escapeHtml(number)}<br>
       <strong>Date:</strong> ${escapeHtml(date)}<br>
+      ${kind === "quotations" ? `<strong>Installation:</strong> ${escapeHtml(customer.installationTime || "Within 4 working days")}<br>` : ""}
+      ${kind === "invoices" ? `<strong>Reference:</strong> ${escapeHtml(record.referenceNumber || "")}<br>` : ""}
       <strong>Status:</strong> ${escapeHtml(capitalize(record.status || defaultStatus(kind)))}
     </div>
   </div>
@@ -895,14 +937,77 @@ function printableHtml(kind, sourceRecord) {
   <h2>Terms and Conditions</h2>
   <ol class="terms">${terms.map((term) => `<li>${escapeHtml(term)}</li>`).join("")}</ol>
   <div class="signature">
-    <strong>For ${escapeHtml(record.signatory || COMPANY_PROFILE.name)}</strong><br><br><br>
+    <strong>For ${escapeHtml(record.signatory || COMPANY_PROFILE.name)}</strong>
+    <img class="stamp" src="${escapeAttr(COMPANY_PROFILE.stamp)}" alt="">
     Authorised Signatory
   </div>
 </body>
 </html>`;
 }
 
+const PDF_BRAND = {
+  navy: [30, 58, 138],
+  orange: [249, 115, 22],
+  sky: [239, 246, 255],
+  peach: [255, 247, 237],
+  line: [191, 219, 254],
+  ink: [15, 23, 42],
+  muted: [71, 85, 105],
+  white: [255, 255, 255]
+};
+
+function setPdfColor(doc, type, color) {
+  doc[type](color[0], color[1], color[2]);
+}
+
+function addPdfNoteBox(doc, label, note, x, y, width) {
+  const text = String(note || "").trim();
+  if (!text) return y;
+  const lines = doc.splitTextToSize(text, width - 18);
+  const height = Math.max(10, lines.length * 4 + 7);
+  setPdfColor(doc, "setFillColor", PDF_BRAND.peach);
+  setPdfColor(doc, "setDrawColor", PDF_BRAND.orange);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(x, y, width, height, 2, 2, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  setPdfColor(doc, "setTextColor", PDF_BRAND.orange);
+  doc.text(label, x + 3, y + 5);
+  doc.setFont("helvetica", "normal");
+  setPdfColor(doc, "setTextColor", PDF_BRAND.ink);
+  doc.text(lines, x + 15, y + 5);
+  doc.setTextColor(0, 0, 0);
+  return y + height + 5;
+}
+
+function withPdfOpacity(doc, opacity, callback) {
+  if (doc.setGState && doc.GState) {
+    let callbackInvoked = false;
+    try {
+      doc.setGState(new doc.GState({ opacity }));
+      callbackInvoked = true;
+      callback();
+      doc.setGState(new doc.GState({ opacity: 1 }));
+      return;
+    } catch (error) {
+      console.warn("PDF opacity is unavailable", error);
+      try {
+        doc.setGState(new doc.GState({ opacity: 1 }));
+      } catch (resetError) {
+        console.warn("Could not reset PDF opacity", resetError);
+      }
+    }
+    if (callbackInvoked) return;
+  }
+  callback();
+}
+
 async function buildCommercialPdf(kind, sourceRecord) {
+  const record = calculateCommercial(kind, sourceRecord);
+  return kind === "invoices" ? buildInvoicePdf(record) : buildQuotationPdf(record);
+}
+
+async function buildQuotationPdf(record) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   if (typeof doc.autoTable !== "function") {
@@ -910,266 +1015,566 @@ async function buildCommercialPdf(kind, sourceRecord) {
     return null;
   }
 
-  const record = calculateCommercial(kind, sourceRecord);
-  const meta = DOCUMENTS[kind];
-  const isInvoice = kind === "invoices";
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 10;
-  let y = await pdfHeader(doc, isInvoice ? "TAX INVOICE" : "QUOTATION");
-
-  doc.setLineWidth(0.3);
-  doc.rect(margin, y, 118, 34);
-  doc.rect(margin + 118, y, pageWidth - margin * 2 - 118, 34);
-
+  let y = await pdfHeader(doc, "QUOTATION");
   const customer = record.customerDetails || {};
+  const leftWidth = 108;
+  const rightWidth = pageWidth - margin * 2 - leftWidth;
+  const boxHeight = 32;
+
+  setPdfColor(doc, "setFillColor", PDF_BRAND.sky);
+  setPdfColor(doc, "setDrawColor", PDF_BRAND.line);
+  doc.rect(margin, y, leftWidth, boxHeight, "FD");
+  setPdfColor(doc, "setFillColor", PDF_BRAND.peach);
+  doc.rect(margin + leftWidth, y, rightWidth, boxHeight, "FD");
+  doc.setTextColor(0, 0, 0);
   doc.setFontSize(8.5);
-  doc.setFont("helvetica", "bold");
-  doc.text("To,", margin + 3, y + 6);
-  doc.text(String(customer.name || record.customerName || ""), margin + 22, y + 6);
-  doc.text("Address:", margin + 3, y + 12);
-  doc.setFont("helvetica", "normal");
-  doc.text(doc.splitTextToSize(customer.installationAddress || "", 92).slice(0, 2), margin + 22, y + 12);
-  doc.setFont("helvetica", "bold");
-  doc.text("Contact:", margin + 3, y + 25);
-  doc.setFont("helvetica", "normal");
-  doc.text(customer.phone || record.phone || "", margin + 22, y + 25);
-  doc.setFont("helvetica", "bold");
-  doc.text("GST No.:", margin + 3, y + 30);
-  doc.setFont("helvetica", "normal");
-  doc.text(customer.gstNo || "", margin + 22, y + 30);
 
-  const rightX = margin + 121;
+  const labelValue = (label, value, labelX, valueX, lineY) => {
+    doc.setFont("helvetica", "bold");
+    doc.text(label, labelX, lineY);
+    doc.setFont("helvetica", "normal");
+    doc.text(String(value || ""), valueX, lineY);
+  };
+
+  let lineY = y + 5;
+  const labelX = margin + 2;
+  const valueX = margin + 26;
+  labelValue("To.", customer.name || record.customerName, labelX, valueX, lineY);
+  lineY += 4.5;
   doc.setFont("helvetica", "bold");
-  doc.text("Date:", rightX, y + 7);
-  doc.text(isInvoice ? "Invoice No.:" : "Quote No.:", rightX, y + 14);
-  doc.text("City/State:", rightX, y + 21);
-  doc.text("Status:", rightX, y + 28);
+  doc.text("Address :", labelX, lineY);
   doc.setFont("helvetica", "normal");
-  doc.text(formatPdfDate(record[meta.dateField]), rightX + 28, y + 7);
-  doc.text(String(record[meta.numberField] || ""), rightX + 28, y + 14);
-  doc.text([customer.city, customer.state].filter(Boolean).join(", "), rightX + 28, y + 21);
-  doc.text(capitalize(record.status || defaultStatus(kind)), rightX + 28, y + 28);
+  const addressLines = doc.splitTextToSize(customer.installationAddress || "", 78);
+  doc.text(addressLines[0] || "", valueX, lineY);
+  if (addressLines[1]) {
+    lineY += 4;
+    doc.text(addressLines[1], valueX, lineY);
+  }
+  lineY += 5;
+  labelValue("Contact :", customer.phone || record.phone, labelX, valueX, lineY);
+  lineY += 4.5;
+  labelValue("E mail :", customer.email || record.email, labelX, valueX, lineY);
+  lineY += 4.5;
+  labelValue("Gst No. :", customer.gstNo, labelX, valueX, lineY);
 
-  y += 39;
+  const rightX = margin + leftWidth + 3;
+  const rightValueX = rightX + 28;
+  let rightY = y + 5;
+  labelValue("Date :", formatPdfDate(record.quotationDate), rightX, rightValueX, rightY);
+  rightY += 5;
+  labelValue("Quote No.", record.quotationNumber, rightX, rightValueX, rightY);
+  rightY += 5;
+  labelValue("Installation :", customer.installationTime || "Within 4 working days", rightX, rightValueX, rightY);
+  y += boxHeight + 1;
 
-  const bodyRows = record.products.map((item, index) => {
+  const productRows = record.products.map((item, index) => {
     const rate = num(item.rateSqFt) || (num(item.rateSqMeter) ? num(item.rateSqMeter) / 10.7639 : 0);
-    const description = [item.category, item.productName, item.notes].filter(Boolean).join("\n");
-    if (isInvoice) {
-      return [
-        String(index + 1),
-        description,
-        item.hsnSac || record.hsnSac || "7314",
-        String(item.quantity || 1),
-        item.areaSqFt ? item.areaSqFt.toFixed(2) : "",
-        rate ? currency2(rate) : "",
-        item.productTotal ? currency2(item.productTotal) : ""
-      ];
-    }
+    const description = (item.category || "") +
+      (item.productName ? "\n" + item.productName : "") +
+      (item.notes ? "\nNote: " + item.notes : "");
     return [
       String(index + 1),
       description,
-      String(item.quantity || 1),
+      String(num(item.quantity) || 1),
       item.areaSqFt ? item.areaSqFt.toFixed(2) : "",
       rate ? currency2(rate) : "",
       item.productTotal ? currency2(item.productTotal) : ""
     ];
   });
+  while (productRows.length < 4) productRows.push(["", "", "", "", "", ""]);
 
-  while (bodyRows.length < (isInvoice ? 6 : 8)) {
-    bodyRows.push(isInvoice ? ["", "", "", "", "", "", ""] : ["", "", "", "", "", ""]);
-  }
-
-  const head = isInvoice
-    ? [["S.No.", "Product Description", "HSN/SAC", "Qty", "Area (Sqft)", "Rate (Rs.)", "Amount (Rs.)"]]
-    : [["S.No.", "Product Description", "Qty", "Area (Sqft)", "Rate (Rs.)", "Amount (Rs.)"]];
-  const colStyles = isInvoice
-    ? {
-        0: { cellWidth: 11, halign: "center" },
-        1: { cellWidth: 68 },
-        2: { cellWidth: 18, halign: "center" },
-        3: { cellWidth: 14, halign: "center" },
-        4: { cellWidth: 24, halign: "center" },
-        5: { cellWidth: 27, halign: "right" },
-        6: { cellWidth: 28, halign: "right" }
-      }
-    : {
-        0: { cellWidth: 12, halign: "center" },
-        1: { cellWidth: 84 },
-        2: { cellWidth: 18, halign: "center" },
-        3: { cellWidth: 30, halign: "center" },
-        4: { cellWidth: 24, halign: "right" },
-        5: { cellWidth: 22, halign: "right" }
-      };
+  const columnStyles = {
+    0: { cellWidth: 10, halign: "center" },
+    1: { cellWidth: 82 },
+    2: { cellWidth: 22, halign: "center" },
+    3: { cellWidth: 26, halign: "center" },
+    4: { cellWidth: 25, halign: "center" },
+    5: { cellWidth: 25, halign: "right" }
+  };
 
   doc.autoTable({
     startY: y,
-    head,
-    body: bodyRows,
+    head: [["S.No.", "Product Description", "Quantity", "Area\n(In Sqft)", "Rate\n(In Rs.)", "Amount\n(In Rs.)"]],
+    body: productRows,
     theme: "grid",
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.3, fontStyle: "bold", fontSize: 8 },
-    bodyStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2, fontSize: 8 },
-    columnStyles: colStyles,
+    headStyles: { fillColor: PDF_BRAND.navy, textColor: PDF_BRAND.white, fontStyle: "bold", lineColor: PDF_BRAND.navy, lineWidth: 0.3, fontSize: 8, halign: "center", valign: "middle", cellPadding: 2 },
+    bodyStyles: { fillColor: PDF_BRAND.white, textColor: PDF_BRAND.ink, lineColor: PDF_BRAND.line, lineWidth: 0.2, fontSize: 8, cellPadding: 2 },
+    columnStyles,
     margin: { left: margin, right: margin },
-    tableLineColor: [0, 0, 0],
+    tableLineColor: PDF_BRAND.line,
     tableLineWidth: 0.3
   });
 
-  y = doc.lastAutoTable.finalY;
-
+  let finalY = doc.lastAutoTable.finalY;
+  const totalQuantity = record.products.reduce((sum, item) => sum + num(item.quantity), 0);
+  const roundoff = Math.round(record.total) - record.total;
   const totalRows = [
-    ["Products Total", currency2(record.productTotal)],
-    ["Installation + Delivery", currency2(record.installation + record.delivery)],
-    ["Subtotal", currency2(record.subtotal)],
-    ["Discount", "-" + currency2(record.discount)],
-    ["Taxable Amount", currency2(record.taxable)],
-    ["GST @ " + record.taxRate + "%", currency2(record.taxAmount)],
-    ["Total Payable", currency2(Math.round(record.total))]
+    ["", "Total (Products)", "", "", "", currency2(record.productTotal)],
+    ["", "Delivery and Installation", String(totalQuantity || ""), "", "", currency2(record.delivery + record.installation)],
+    ["", "Sub Total", "", "", "", currency2(record.subtotal)],
+    ...(record.discount > 0 ? [["", "Discount (-)", "", "", "", "-" + currency2(record.discount)]] : []),
+    ["", "Taxable Amount", "", "", "", currency2(record.taxable)],
+    ["", "IGST @ " + record.taxRate + "%", "", "", "", currency2(record.taxAmount)],
+    ["", "R/O", "", "", "", roundoff ? currency2(roundoff) : ""]
   ];
 
   doc.autoTable({
-    startY: y + 2,
+    startY: finalY,
     body: totalRows,
     theme: "grid",
-    styles: { fontSize: 8, lineColor: [0, 0, 0], lineWidth: 0.2, cellPadding: 2 },
-    columnStyles: {
-      0: { cellWidth: 145, fontStyle: "bold", halign: "right" },
-      1: { cellWidth: 45, fontStyle: "bold", halign: "right" }
-    },
-    margin: { left: margin, right: margin }
+    bodyStyles: { fillColor: PDF_BRAND.sky, textColor: PDF_BRAND.ink, lineColor: PDF_BRAND.line, lineWidth: 0.2, fontSize: 8, cellPadding: 2 },
+    columnStyles: { ...columnStyles, 1: { cellWidth: 82, fontStyle: "bold" }, 5: { cellWidth: 25, halign: "right", fontStyle: "bold" } },
+    margin: { left: margin, right: margin },
+    tableLineColor: PDF_BRAND.line,
+    tableLineWidth: 0.3
   });
 
-  y = doc.lastAutoTable.finalY + 6;
-  doc.setFont("helvetica", "bold");
+  finalY = doc.lastAutoTable.finalY;
+  doc.autoTable({
+    startY: finalY,
+    body: [["", "Total Payable Amount", "", "", "", currency2(Math.round(record.total))]],
+    theme: "grid",
+    bodyStyles: { fillColor: PDF_BRAND.orange, textColor: PDF_BRAND.white, lineColor: PDF_BRAND.orange, lineWidth: 0.4, fontSize: 9, fontStyle: "bold", cellPadding: 2 },
+    columnStyles,
+    margin: { left: margin, right: margin },
+    tableLineColor: PDF_BRAND.orange,
+    tableLineWidth: 0.4
+  });
+
+  finalY = doc.lastAutoTable.finalY + 8;
   doc.setFontSize(8.5);
-  doc.text("Amount in words: " + amountInWords(Math.round(record.total)) + " Rupees Only.", margin, y);
-  y += 7;
+  doc.setFont("helvetica", "bold");
+  doc.text("Amount (in words) : - " + amountInWords(Math.round(record.total)) + " Rupees Only.", margin, finalY);
+  finalY += 6;
+  finalY = addPdfNoteBox(doc, "Note:", customer.notes || record.notes, margin, finalY, pageWidth - margin * 2);
 
-  doc.setFontSize(7.8);
-  doc.text("TERMS AND CONDITIONS:", margin, y);
-  y += 4;
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "bold");
+  doc.text("TERMS & CONDITIONS:", margin, finalY);
+  finalY += 4;
   doc.setFont("helvetica", "normal");
-  const terms = isInvoice ? COMPANY_PROFILE.invoiceTerms : COMPANY_PROFILE.quotationTerms;
-  terms.forEach((term, index) => {
-    const lines = doc.splitTextToSize(index + 1 + ". " + term, 180);
-    doc.text(lines, margin + 2, y);
-    y += lines.length * 4;
+  COMPANY_PROFILE.quotationTerms.forEach((term, index) => {
+    const lines = doc.splitTextToSize(index + 1 + ".  " + term, 180);
+    doc.text(lines, margin + 2, finalY);
+    finalY += lines.length * 4;
   });
-
-  addPdfSignature(doc, y + 4, record.signatory || COMPANY_PROFILE.name);
+  finalY += 3;
+  doc.setFontSize(8.5);
+  doc.setFont("helvetica", "bold");
+  doc.text("Advance : /-", margin, finalY);
+  doc.text("Outstanding : /-", margin, finalY + 5);
+  await addPdfSignature(doc, finalY, record.signatory || COMPANY_PROFILE.name);
   addPdfFooter(doc);
   return doc;
 }
 
-async function buildWarrantyPdf(record) {
+async function buildInvoicePdf(record) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  if (typeof doc.autoTable !== "function") {
+    toast("PDF table library is still loading. Try again in a moment.");
+    return null;
+  }
+
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 10;
-  let y = await pdfHeader(doc, "WARRANTY CARD");
+  const tableWidth = pageWidth - margin * 2;
+  const customer = record.customerDetails || {};
+  let y = await pdfHeader(doc, "TAX INVOICE");
+  const leftWidth = 108;
+  const rightWidth = tableWidth - leftWidth;
+  const boxHeight = 32;
+
+  setPdfColor(doc, "setFillColor", PDF_BRAND.sky);
+  setPdfColor(doc, "setDrawColor", PDF_BRAND.line);
+  doc.rect(margin, y, leftWidth, boxHeight, "FD");
+  setPdfColor(doc, "setFillColor", PDF_BRAND.peach);
+  doc.rect(margin + leftWidth, y, rightWidth, boxHeight, "FD");
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(8.5);
+
+  const labelValue = (label, value, labelX, valueX, lineY) => {
+    doc.setFont("helvetica", "bold");
+    doc.text(label, labelX, lineY);
+    doc.setFont("helvetica", "normal");
+    doc.text(String(value || ""), valueX, lineY);
+  };
+
+  let lineY = y + 5;
+  const labelX = margin + 2;
+  const valueX = margin + 22;
+  labelValue("To,", customer.name || record.customerName, labelX, valueX, lineY);
+  lineY += 4.5;
+  doc.setFont("helvetica", "bold");
+  doc.text("Address :", labelX, lineY);
+  doc.setFont("helvetica", "normal");
+  const addressLines = doc.splitTextToSize(customer.installationAddress || "", 82);
+  doc.text(addressLines[0] || "", valueX, lineY);
+  if (addressLines[1]) {
+    lineY += 4;
+    doc.text(addressLines[1], valueX, lineY);
+  }
+  lineY += 5;
+  labelValue("Contact :", customer.phone || record.phone, labelX, valueX, lineY);
+  lineY += 4.5;
+  labelValue("Gst No. :", customer.gstNo, labelX, valueX, lineY);
+
+  const rightX = margin + leftWidth + 3;
+  const rightValueX = rightX + 24;
+  let rightY = y + 5;
+  labelValue("Date :", formatPdfDate(record.invoiceDate), rightX, rightValueX, rightY);
+  rightY += 5;
+  labelValue("Invoice No.", record.invoiceNumber, rightX, rightValueX, rightY);
+  rightY += 5;
+  labelValue("Ref.", record.referenceNumber, rightX, rightValueX, rightY);
+  rightY += 5;
+  labelValue("Delivery Add :", [customer.city, customer.state].filter(Boolean).join(", "), rightX, rightValueX + 4, rightY);
+  y += boxHeight + 1;
+
+  const widths = [10, 65, 16, 14, 22, 30, 33];
+  const productRows = record.products.map((item, index) => {
+    const rate = num(item.rateSqFt) || (num(item.rateSqMeter) ? num(item.rateSqMeter) / 10.7639 : 0);
+    const description = (item.category || "") +
+      (item.productName ? "\n" + item.productName : "") +
+      (item.notes ? "\nNote: " + item.notes : "");
+    return [
+      String(index + 1),
+      description,
+      item.hsnSac || record.hsnSac || "7314",
+      String(num(item.quantity) || 1),
+      item.areaSqFt ? item.areaSqFt.toFixed(2) : "",
+      rate ? currency2(rate) : "",
+      item.productTotal ? currency2(item.productTotal) : ""
+    ];
+  });
+  while (productRows.length < 6) productRows.push(["", "", "", "", "", "", ""]);
+
+  const totalQuantity = record.products.reduce((sum, item) => sum + num(item.quantity), 0);
+  const halfTax = record.taxAmount / 2;
+  const detailRowCount = productRows.length;
+  const tableRows = [
+    ...productRows,
+    ["", "Total (Products)", "", "", "", "", currency2(record.productTotal)],
+    ["", "Transportation & Installation Charges", "", String(totalQuantity || ""), "", "", currency2(record.delivery + record.installation)],
+    ["", "Sub Total", "", "", "", "", currency2(record.subtotal)],
+    ...(record.discount > 0 ? [["", "Discount (-)", "", "", "", "", "-" + currency2(record.discount)]] : []),
+    ["", "Taxable Amount", "", "", "", "", currency2(record.taxable)],
+    ["", "CGST @ " + record.taxRate / 2 + "%", "", "", "", "", currency2(halfTax)],
+    ["", "SGST @ " + record.taxRate / 2 + "%", "", "", "", "", currency2(halfTax)]
+  ];
+  const columnStyles = Object.fromEntries(widths.map((width, index) => [
+    index,
+    {
+      cellWidth: width,
+      halign: index === 0 || index === 2 || index === 3 || index === 4 ? "center" : index >= 5 ? "right" : "left"
+    }
+  ]));
+
+  doc.autoTable({
+    startY: y,
+    head: [["S.No.", "Product Description", "HSN\nSAC", "Qty.\nNos.", "Area\n(in Sqft)", "Rate\n(In Rs.)", "Amount\n(In Rs.)"]],
+    body: tableRows,
+    theme: "grid",
+    headStyles: { fillColor: PDF_BRAND.navy, textColor: PDF_BRAND.white, fontStyle: "bold", lineColor: PDF_BRAND.navy, lineWidth: 0.5, fontSize: 8, halign: "center", valign: "middle", cellPadding: 2 },
+    bodyStyles: { fillColor: PDF_BRAND.white, textColor: PDF_BRAND.ink, lineColor: PDF_BRAND.line, lineWidth: 0.5, fontSize: 8, cellPadding: 2 },
+    columnStyles,
+    didParseCell(data) {
+      if (data.section === "body" && data.row.index >= detailRowCount && (data.column.index === 1 || data.column.index === 6)) {
+        data.cell.styles.fontStyle = "bold";
+      }
+    },
+    margin: { left: margin, right: margin },
+    tableLineColor: PDF_BRAND.line,
+    tableLineWidth: 0.5
+  });
+
+  let finalY = doc.lastAutoTable.finalY + 5;
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.text("GST Amount (in words) : " + amountInWords(Math.round(record.taxAmount)) + " Rupees Only.", margin, finalY);
+  finalY += 4;
+  const roundoff = Math.round(record.total) - record.total;
+
+  doc.autoTable({
+    startY: finalY,
+    body: [
+      ["", "", "", "", "", "R/o", roundoff ? currency2(roundoff) : ""],
+      ["", "Total Payable Amount", "", "", "", "", currency2(Math.round(record.total))]
+    ],
+    theme: "grid",
+    bodyStyles: { fillColor: PDF_BRAND.sky, textColor: PDF_BRAND.ink, lineColor: PDF_BRAND.line, lineWidth: 0.3, fontSize: 9, fontStyle: "bold", cellPadding: 2 },
+    columnStyles,
+    didParseCell(data) {
+      if (data.section === "body" && data.row.index === 1) {
+        data.cell.styles.fillColor = PDF_BRAND.orange;
+        data.cell.styles.textColor = PDF_BRAND.white;
+        data.cell.styles.lineColor = PDF_BRAND.orange;
+      }
+    },
+    margin: { left: margin, right: margin },
+    tableLineColor: PDF_BRAND.line,
+    tableLineWidth: 0.3
+  });
+
+  finalY = doc.lastAutoTable.finalY + 5;
+  doc.setFontSize(8.5);
+  doc.setFont("helvetica", "bold");
+  doc.text("Total Amount (in words) :- " + amountInWords(Math.round(record.total)) + " Rupees Only.", margin, finalY);
+  finalY += 6;
+  finalY = addPdfNoteBox(doc, "Note:", customer.notes || record.notes, margin, finalY, pageWidth - margin * 2);
+
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "bold");
+  doc.text("TERMS & CONDITIONS:", margin, finalY);
+  finalY += 4;
+  doc.setFont("helvetica", "normal");
+  COMPANY_PROFILE.invoiceTerms.forEach((term, index) => {
+    const lines = doc.splitTextToSize(index + 1 + ".  " + term, 180);
+    doc.text(lines, margin + 2, finalY);
+    finalY += lines.length * 4;
+  });
+  await addPdfSignature(doc, finalY + 3, record.signatory || COMPANY_PROFILE.name);
+  addPdfFooter(doc);
+  return doc;
+}
+
+async function buildWarrantyPdf(sourceRecord) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const record = normalizeWarrantyRecord(sourceRecord);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 10;
   const customer = record.customerDetails || {};
 
-  doc.setLineWidth(0.4);
-  doc.rect(margin, y, pageWidth - margin * 2, 76);
-  y += 8;
-  pdfLine(doc, "Customer's Name", customer.name || record.customerName || "", margin + 5, y);
-  y += 8;
-  pdfLine(doc, "Address", customer.installationAddress || "", margin + 5, y, 124);
-  y += 14;
-  pdfLine(doc, "Mobile No.", customer.phone || record.phone || "", margin + 5, y);
-  pdfLine(doc, "E-mail", customer.email || record.email || "", pageWidth / 2 + 4, y, 30);
-  y += 8;
-  pdfLine(doc, "Product Purchased", record.productPurchased || "", margin + 5, y);
-  y += 8;
-  pdfLine(doc, "Order/Invoice No.", record.invoiceNo || record.serialNo || "", margin + 5, y);
-  y += 8;
-  pdfLine(doc, "Installation Date", formatPdfDate(record.installationDate), margin + 5, y);
-  y += 8;
-  pdfLine(doc, "Installed By", record.installedBy || "", margin + 5, y);
-
-  addPdfSignature(doc, y - 56, COMPANY_PROFILE.name);
-
-  const termsY = 120;
-  doc.rect(margin, termsY, pageWidth - margin * 2, 105);
+  setPdfColor(doc, "setFillColor", PDF_BRAND.navy);
+  doc.rect(0, 0, pageWidth, 16, "F");
+  setPdfColor(doc, "setFillColor", PDF_BRAND.orange);
+  doc.rect(0, 16, pageWidth, 2, "F");
+  setPdfColor(doc, "setTextColor", PDF_BRAND.white);
+  doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8.5);
-  doc.text("Terms and Conditions:", margin + 5, termsY + 8);
+  doc.text("WARRANTY CARD", pageWidth / 2, 11, { align: "center" });
+  doc.setTextColor(0, 0, 0);
+
+  const cardY = 22;
+  const cardHeight = 80;
+  setPdfColor(doc, "setFillColor", PDF_BRAND.sky);
+  setPdfColor(doc, "setDrawColor", PDF_BRAND.navy);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(margin, cardY, pageWidth - margin * 2, cardHeight, 2, 2, "FD");
+
+  const labelX = margin + 5;
+  const valueX = margin + 46;
+  let lineY = cardY + 8;
+  doc.setFontSize(9.5);
+  const warrantyRow = (label, value, rowY) => {
+    doc.setFont("helvetica", "bold");
+    doc.text(label, labelX, rowY);
+    doc.setLineWidth(0.2);
+    doc.line(valueX - 2, rowY + 0.5, pageWidth - margin - 5, rowY + 0.5);
+    doc.setFont("helvetica", "normal");
+    doc.text(String(value || ""), valueX, rowY);
+  };
+
+  warrantyRow("Customer's Name", customer.name || record.customerName, lineY);
+  lineY += 7;
+  doc.setFont("helvetica", "bold");
+  doc.text("Address", labelX, lineY);
+  doc.line(valueX - 2, lineY + 0.5, pageWidth - margin - 5, lineY + 0.5);
   doc.setFont("helvetica", "normal");
-  let ty = termsY + 14;
-  COMPANY_PROFILE.warrantyTerms.forEach((term, index) => {
-    const lines = doc.splitTextToSize(index + 1 + ". " + term, pageWidth - margin * 2 - 12);
-    doc.text(lines, margin + 5, ty);
-    ty += lines.length * 4.3;
-  });
+  const addressLines = doc.splitTextToSize(customer.installationAddress || "", pageWidth - margin - 5 - valueX + 2);
+  doc.text(addressLines[0] || "", valueX, lineY);
+  if (addressLines[1]) {
+    lineY += 5;
+    doc.line(labelX, lineY + 0.5, pageWidth - margin - 5, lineY + 0.5);
+    doc.text(addressLines[1], labelX, lineY);
+  }
+  lineY += 7;
+  doc.setFont("helvetica", "bold");
+  doc.text("Mobile No.", labelX, lineY);
+  doc.setFont("helvetica", "normal");
+  doc.text(customer.phone || record.phone || "", valueX, lineY);
+  doc.setFont("helvetica", "bold");
+  doc.text("E-mail", pageWidth / 2 + 5, lineY);
+  doc.setFont("helvetica", "normal");
+  doc.text(customer.email || record.email || "", pageWidth / 2 + 20, lineY);
+  lineY += 7;
+  warrantyRow("Product Purchased", record.productPurchased, lineY);
+  lineY += 7;
+  warrantyRow("Order/Invoice No.", record.invoiceNo || record.serialNo, lineY);
+  lineY += 7;
+  warrantyRow("Installation Date", formatPdfDate(record.installationDate), lineY);
 
   const logo = await getLogoDataUrl();
   if (logo) {
     try {
-      doc.addImage(logo, "PNG", pageWidth / 2 - 10, 232, 20, 20);
+      const dimensions = pdfImageDimensions(doc, logo, 50, 38);
+      withPdfOpacity(doc, 0.1, () => {
+        doc.addImage(logo, "PNG", pageWidth / 2 - dimensions.width / 2 + 18, cardY + 17, dimensions.width, dimensions.height);
+      });
     } catch (error) {
-      console.warn("Could not add PDF logo", error);
+      console.warn("Could not add warranty watermark", error);
     }
   }
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9.5);
-  doc.text(COMPANY_PROFILE.name, pageWidth / 2, 257, { align: "center" });
+  doc.setFontSize(9);
   doc.setFont("helvetica", "italic");
+  doc.setTextColor(150, 150, 150);
+  doc.text('"' + COMPANY_PROFILE.tagline + '"', pageWidth / 2 + 14, cardY + 54, { align: "center" });
+  doc.setTextColor(0, 0, 0);
+
+  lineY = cardY + cardHeight - 10;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.text("Installed By", labelX, lineY);
+  doc.setFont("helvetica", "normal");
+  doc.line(labelX + 22, lineY + 0.5, labelX + 70, lineY + 0.5);
+  doc.text(record.installedBy || "", labelX + 24, lineY);
+
+  const stamp = await getStampDataUrl();
+  if (stamp) {
+    try {
+      doc.addImage(stamp, "PNG", pageWidth - margin - 48, lineY - 22, 35, 25);
+    } catch (error) {
+      console.warn("Could not add warranty stamp", error);
+    }
+  }
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("For " + COMPANY_PROFILE.name, pageWidth - margin - 8, lineY - 12, { align: "right" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.line(pageWidth - margin - 55, lineY + 0.5, pageWidth - margin - 8, lineY + 0.5);
+  doc.text("Authorised Signatory", pageWidth - margin - 8, lineY, { align: "right" });
+
+  const termsY = cardY + cardHeight + 6;
+  const termsHeight = 112;
+  setPdfColor(doc, "setFillColor", PDF_BRAND.peach);
+  setPdfColor(doc, "setDrawColor", PDF_BRAND.orange);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(margin, termsY, pageWidth - margin * 2, termsHeight, 2, 2, "FD");
+
+  let termsLineY = termsY + 7;
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  setPdfColor(doc, "setTextColor", PDF_BRAND.navy);
+  doc.text("Terms & Conditions:", labelX, termsLineY);
+  doc.setTextColor(0, 0, 0);
+  termsLineY += 5;
+  doc.setFont("helvetica", "normal");
+  const romanNumbers = ["(i)", "(ii)", "(iii)", "(iv)", "(v)", "(vi)", "(vii)", "(viii)", "(ix)", "(x)", "(xi)"];
+  COMPANY_PROFILE.warrantyTerms.forEach((term, index) => {
+    const lines = doc.splitTextToSize((romanNumbers[index] || "(" + (index + 1) + ")") + " " + term, pageWidth - margin * 2 - 12);
+    doc.text(lines, labelX, termsLineY);
+    termsLineY += lines.length * 4.2;
+  });
+
+  const logoY = termsY + termsHeight - 43;
+  if (logo) {
+    try {
+      const dimensions = pdfImageDimensions(doc, logo, 42, 16);
+      doc.addImage(logo, "PNG", pageWidth / 2 - dimensions.width / 2, logoY, dimensions.width, dimensions.height);
+    } catch (error) {
+      console.warn("Could not add warranty footer logo", error);
+    }
+  }
+  doc.setFontSize(9.5);
+  doc.setFont("helvetica", "bold");
+  doc.text(COMPANY_PROFILE.name, pageWidth / 2, logoY + 19, { align: "center" });
   doc.setFontSize(7.5);
-  doc.text(COMPANY_PROFILE.tagline, pageWidth / 2, 262, { align: "center" });
+  doc.setFont("helvetica", "italic");
+  doc.text('"' + COMPANY_PROFILE.tagline + '"', pageWidth / 2, logoY + 24, { align: "center" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
-  doc.text(COMPANY_PROFILE.address, pageWidth / 2, 267, { align: "center" });
-  doc.text("Contact: " + COMPANY_PROFILE.contacts.join(", ") + "   Website: " + COMPANY_PROFILE.website, pageWidth / 2, 272, { align: "center" });
-
-  addPdfFooter(doc);
+  const addressFooter = doc.splitTextToSize("Address : " + COMPANY_PROFILE.address, pageWidth - margin * 2 - 8);
+  addressFooter.forEach((line, index) => doc.text(line, pageWidth / 2, logoY + 29 + index * 4, { align: "center" }));
+  doc.text("Contact : " + COMPANY_PROFILE.contacts.join(", ") + "   Website : " + COMPANY_PROFILE.website, pageWidth / 2, logoY + 37, { align: "center" });
   return doc;
 }
 
 async function pdfHeader(doc, title) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 10;
+  setPdfColor(doc, "setFillColor", PDF_BRAND.navy);
+  doc.rect(0, 0, pageWidth, 13, "F");
+  setPdfColor(doc, "setFillColor", PDF_BRAND.orange);
+  doc.rect(0, 13, pageWidth, 2.2, "F");
+  doc.setFontSize(10.5);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text(title, pageWidth / 2, 11, { align: "center" });
+  setPdfColor(doc, "setTextColor", PDF_BRAND.white);
+  doc.text(title, pageWidth / 2, 8.5, { align: "center" });
 
   const logo = await getLogoDataUrl();
+  let logoPanelWidth = 0;
   if (logo) {
     try {
-      doc.addImage(logo, "PNG", margin, 15, 24, 18);
+      const dimensions = pdfImageDimensions(doc, logo, 34, 15);
+      logoPanelWidth = dimensions.width + 5;
+      doc.addImage(logo, "PNG", margin, 20, dimensions.width, dimensions.height);
     } catch (error) {
       console.warn("Could not add PDF logo", error);
     }
   }
 
-  doc.setFontSize(13);
-  doc.text(COMPANY_PROFILE.name, pageWidth / 2, 18, { align: "center" });
-  doc.setFont("helvetica", "italic");
+  setPdfColor(doc, "setTextColor", PDF_BRAND.navy);
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text(COMPANY_PROFILE.name.toUpperCase(), pageWidth / 2, 22, { align: "center" });
+  setPdfColor(doc, "setTextColor", PDF_BRAND.orange);
   doc.setFontSize(8);
-  doc.text(COMPANY_PROFILE.tagline, pageWidth / 2, 23, { align: "center" });
+  doc.setFont("helvetica", "bolditalic");
+  doc.text(COMPANY_PROFILE.tagline, pageWidth / 2, 26.5, { align: "center" });
+
+  const detailsX = margin + logoPanelWidth;
+  const detailsWidth = pageWidth - margin - detailsX;
+  const detailsCenter = detailsX + detailsWidth / 2;
+  setPdfColor(doc, "setFillColor", PDF_BRAND.sky);
+  setPdfColor(doc, "setDrawColor", PDF_BRAND.line);
+  doc.roundedRect(detailsX, 29, detailsWidth, 17.5, 2, 2, "FD");
+  setPdfColor(doc, "setTextColor", PDF_BRAND.ink);
+  doc.setFontSize(7.3);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.6);
-  doc.text("Office: " + COMPANY_PROFILE.officeAddress, pageWidth / 2, 28, { align: "center" });
-  doc.text("Factory: " + COMPANY_PROFILE.address, pageWidth / 2, 32, { align: "center" });
-  doc.text("Email: " + COMPANY_PROFILE.email + "   Website: " + COMPANY_PROFILE.website, pageWidth / 2, 36, { align: "center" });
-  doc.text("Contact: " + COMPANY_PROFILE.contacts.join(", "), pageWidth / 2, 40, { align: "center" });
-  if (COMPANY_PROFILE.gstNumber) {
-    doc.text("GST: " + COMPANY_PROFILE.gstNumber, pageWidth - margin, 40, { align: "right" });
-  }
-  return 45;
+  doc.text("Office : " + COMPANY_PROFILE.officeAddress, detailsCenter, 33, { align: "center" });
+  doc.text("Factory : " + COMPANY_PROFILE.address, detailsCenter, 36.8, { align: "center" });
+  doc.text("Email : " + COMPANY_PROFILE.email + "   |   Website : " + COMPANY_PROFILE.website, detailsCenter, 40.6, { align: "center" });
+  doc.text("Contact Number : " + COMPANY_PROFILE.contacts.join(", ") + "   |   Our GST : " + COMPANY_PROFILE.gstNumber, detailsCenter, 44.4, { align: "center" });
+  setPdfColor(doc, "setDrawColor", PDF_BRAND.orange);
+  doc.setLineWidth(0.7);
+  doc.line(margin, 49, pageWidth - margin, 49);
+  doc.setTextColor(0, 0, 0);
+  return 51;
 }
 
-function addPdfSignature(doc, y, signatory) {
+function pdfImageDimensions(doc, dataUrl, maxWidth, maxHeight) {
+  const properties = doc.getImageProperties(dataUrl);
+  const scale = Math.min(maxWidth / properties.width, maxHeight / properties.height);
+  return {
+    width: properties.width * scale,
+    height: properties.height * scale
+  };
+}
+
+async function addPdfSignature(doc, y, signatory) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const safeY = Math.min(y, pageHeight - 32);
+  const safeY = Math.min(y, pageHeight - 36);
+  const stamp = await getStampDataUrl();
+  if (stamp) {
+    try {
+      doc.addImage(stamp, "PNG", pageWidth - 55, safeY + 1, 35, 25);
+    } catch (error) {
+      console.warn("Could not add PDF stamp", error);
+    }
+  }
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("For " + signatory, pageWidth - 18, safeY, { align: "right" });
+  doc.text("For " + signatory, pageWidth - 18, safeY + 2, { align: "right" });
   doc.setLineWidth(0.2);
-  doc.line(pageWidth - 72, safeY + 16, pageWidth - 18, safeY + 16);
+  doc.line(pageWidth - 72, safeY + 24, pageWidth - 18, safeY + 24);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.text("Authorised Signatory", pageWidth - 18, safeY + 21, { align: "right" });
+  doc.text("Authorised Signatory", pageWidth - 18, safeY + 29, { align: "right" });
 }
 
 function addPdfFooter(doc) {
@@ -1192,8 +1597,20 @@ function pdfLine(doc, label, value, x, y, labelWidth = 42) {
 
 function getLogoDataUrl() {
   if (logoDataUrlPromise) return logoDataUrlPromise;
-  logoDataUrlPromise = new Promise((resolve) => {
+  logoDataUrlPromise = imageToDataUrl(COMPANY_PROFILE.logo, "logo");
+  return logoDataUrlPromise;
+}
+
+function getStampDataUrl() {
+  if (stampDataUrlPromise) return stampDataUrlPromise;
+  stampDataUrlPromise = imageToDataUrl(COMPANY_PROFILE.stamp, "stamp");
+  return stampDataUrlPromise;
+}
+
+function imageToDataUrl(src, label) {
+  return new Promise((resolve) => {
     const image = new Image();
+    image.crossOrigin = "anonymous";
     image.onload = () => {
       try {
         const canvas = document.createElement("canvas");
@@ -1203,14 +1620,13 @@ function getLogoDataUrl() {
         ctx.drawImage(image, 0, 0);
         resolve(canvas.toDataURL("image/png"));
       } catch (error) {
-        console.warn("Could not convert logo to data URL", error);
+        console.warn("Could not convert " + label + " to data URL", error);
         resolve("");
       }
     };
     image.onerror = () => resolve("");
-    image.src = COMPANY_PROFILE.logo;
+    image.src = src;
   });
-  return logoDataUrlPromise;
 }
 
 function exportJson() {
@@ -1265,7 +1681,10 @@ function defaultCommercialRecord(kind) {
   const record = {
     [meta.numberField]: kind === "invoices" ? generateInvoiceNumber() : generateQuotationNumber(),
     [meta.dateField]: todayISO(),
-    customerDetails: { country: "India" },
+    customerDetails: {
+      country: "India",
+      installationTime: kind === "quotations" ? "Within 4 working days" : ""
+    },
     products: [emptyProduct()],
     taxMode: 18,
     customTaxRate: 0,
@@ -1274,7 +1693,10 @@ function defaultCommercialRecord(kind) {
     status: defaultStatus(kind),
     companyProfile: COMPANY_PROFILE
   };
-  if (kind === "invoices") record.hsnSac = "7314";
+  if (kind === "invoices") {
+    record.hsnSac = "7314";
+    record.referenceNumber = "";
+  }
   return record;
 }
 
@@ -1292,6 +1714,7 @@ function normalizeCommercialRecord(kind, record) {
       city: "",
       state: "",
       country: "India",
+      installationTime: kind === "quotations" ? "Within 4 working days" : "",
       installationAddress: "",
       notes: "",
       ...(record.customerDetails || {})
@@ -1302,7 +1725,8 @@ function normalizeCommercialRecord(kind, record) {
     discount: record.discount || 0,
     signatory: record.signatory || COMPANY_PROFILE.name,
     status: record.status || defaultStatus(kind),
-    hsnSac: record.hsnSac || "7314"
+    hsnSac: record.hsnSac || "7314",
+    referenceNumber: record.referenceNumber || record.quotationNumber || ""
   };
 }
 
@@ -1328,6 +1752,8 @@ function normalizeWarrantyRecord(record) {
       name: "",
       phone: "",
       email: "",
+      city: "",
+      state: "",
       country: "India",
       installationAddress: "",
       ...(record.customerDetails || {})

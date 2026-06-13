@@ -7,7 +7,8 @@ Standalone document-generation project extracted from the NewTech admin dashboar
 - Creates quotations, tax invoices, and warranty cards.
 - Calculates area, product totals, discounts, GST, and grand totals.
 - Saves records in browser localStorage.
-- Downloads or prints branded PDF documents with jsPDF.
+- Downloads or prints colorful navy/orange branded PDFs with the NewTech logo, company details, GST number, terms, and authorized company stamp.
+- Generates separate professional layouts for quotations, tax invoices, and warranty cards.
 - Exports and imports JSON for transfer into an eDocument system.
 
 ## Files
@@ -16,12 +17,24 @@ Standalone document-generation project extracted from the NewTech admin dashboar
 - `styles.css` - standalone UI styles.
 - `app.js` - document logic, storage, PDF generation, and JSON transfer.
 - `assets/logo.png` - NewTech logo used in the app and PDFs.
+- `assets/company-stamp.png` - company stamp used in PDF and printable signatures.
 
 ## Run
 
 Open `index.html` in a browser. No build step is required.
 
 Direct PDF export uses the jsPDF CDN loaded in `index.html`. If the CDN is blocked, the app falls back to a printable HTML document that can be opened and saved as PDF from the browser print dialog.
+
+## Deploy to Vercel
+
+This repository is ready for Vercel as a static site:
+
+1. Import the GitHub repository into Vercel.
+2. Keep the framework preset as `Other`.
+3. Leave the build command and output directory empty.
+4. Deploy from the repository root.
+
+The included `vercel.json` enables clean URLs, security headers, and long-term caching for versioned assets. No environment variables are required.
 
 ## Transfer Notes
 
