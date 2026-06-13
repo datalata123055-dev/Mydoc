@@ -1513,13 +1513,19 @@ async function pdfHeader(doc, title) {
   setPdfColor(doc, "setTextColor", PDF_BRAND.white);
   doc.text(title, pageWidth / 2, 8.5, { align: "center" });
 
-  // Logo — left side, properly sized, above the details box
+  // Header layout: logo panel (left) + company info (right)
+  const logoAreaWidth = 52;
+  const textAreaX = margin + logoAreaWidth;
+  const textAreaWidth = pageWidth - margin - textAreaX;
+  const textCenter = textAreaX + textAreaWidth / 2;
+
+  // Logo — bigger, vertically centered in header area
   const logo = await getLogoDataUrl();
   if (logo) {
     try {
-      const dimensions = pdfImageDimensions(doc, logo, 38, 13);
-      const logoX = margin + 1;
-      const logoY = 17;
+      const dimensions = pdfImageDimensions(doc, logo, 46, 24);
+      const logoX = margin + (logoAreaWidth - dimensions.width) / 2;
+      const logoY = 18 + (28 - dimensions.height) / 2;
       doc.addImage(logo, "PNG", logoX, logoY, dimensions.width, dimensions.height);
     } catch (error) {
       console.warn("Could not add PDF logo", error);
@@ -1528,7 +1534,7 @@ async function pdfHeader(doc, title) {
 
   // Company name — centered on full page width
   setPdfColor(doc, "setTextColor", PDF_BRAND.navy);
-  doc.setFontSize(16);
+  doc.setFontSize(15);
   doc.setFont("helvetica", "bold");
   doc.text(COMPANY_PROFILE.name.toUpperCase(), pageWidth / 2, 22, { align: "center" });
 
@@ -1536,7 +1542,7 @@ async function pdfHeader(doc, title) {
   setPdfColor(doc, "setTextColor", PDF_BRAND.orange);
   doc.setFontSize(8);
   doc.setFont("helvetica", "bolditalic");
-  doc.text(COMPANY_PROFILE.tagline, pageWidth / 2, 26.5, { align: "center" });
+  doc.text(COMPANY_PROFILE.tagline, textCenter, 28.5, { align: "center" });
 
   // Company details box — full width, properly below logo & name
   setPdfColor(doc, "setFillColor", PDF_BRAND.sky);
@@ -1546,6 +1552,16 @@ async function pdfHeader(doc, title) {
   setPdfColor(doc, "setTextColor", PDF_BRAND.ink);
   doc.setFontSize(7.3);
   doc.setFont("helvetica", "normal");
+  doc.text("Office : " + COMPANY_PROFILE.officeAddress, fullCenter, 35, { align: "center" });
+  doc.text("Factory : " + COMPANY_PROFILE.address, fullCenter, 38.8, { align: "center" });
+  doc.text("Email : " + COMPANY_PROFILE.email + "   |   Website : " + COMPANY_PROFILE.website, fullCenter, 42.6, { align: "center" });
+  doc.text("Contact Number : " + COMPANY_PROFILE.contacts.join(", ") + "   |   Our GST : " + COMPANY_PROFILE.gstNumber, fullCenter, 46.4, { align: "center" });
+
+  setPdfColor(doc, "setDrawColor", PDF_BRAND.orange);
+  doc.setLineWidth(0.7);
+  doc.line(margin, 51, pageWidth - margin, 51);
+  doc.setTextColor(0, 0, 0);
+  return 53;
   doc.text("Office : " + COMPANY_PROFILE.officeAddress, fullCenter, 34, { align: "center" });
   doc.text("Factory : " + COMPANY_PROFILE.address, fullCenter, 37.8, { align: "center" });
   doc.text("Email : " + COMPANY_PROFILE.email + "   |   Website : " + COMPANY_PROFILE.website, fullCenter, 41.6, { align: "center" });
