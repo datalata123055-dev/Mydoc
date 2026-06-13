@@ -1,61 +1,80 @@
-const CACHE_NAME = "edocument-offline-v2";
-
-// All local files to cache
-const ASSETS_TO_CACHE = [
+var CACHE_NAME = "edocument-offline-v3";
+var APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
+  "./compat.js",
   "./app.js",
   "./offline-indicator.js",
+  "./firebase-sync.js",
   "./manifest.json",
   "./libs/jspdf.umd.min.js",
   "./libs/jspdf.plugin.autotable.min.js",
   "./assets/fonts/inter.css",
   "./assets/fonts/inter-latin-variable.woff2",
   "./assets/fonts/inter-latin.woff2",
-  "./assets/logo.png"
+  "./assets/logo.png",
+  "./assets/company-stamp.png",
+  "./assets/apple-touch-icon.png",
+  "./assets/icon-192.png",
+  "./assets/icon-512.png"
 ];
 
-// Install: cache everything immediately
-self.addEventListener("install", (event) => {
+self.addEventListener("install", function (event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(function (cache) {
+      return cache.addAll(APP_SHELL);
+    }).then(function () {
+      return self.skipWaiting();
+    })
   );
 });
 
-// Activate: delete old caches
-self.addEventListener("activate", (event) => {
+self.addEventListener("activate", function (event) {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
+    caches.keys().then(function (keys) {
+      return Promise.all(keys.map(function (key) {
+        if (key !== CACHE_NAME) return caches.delete(key);
+        return Promise.resolve(false);
+      }));
+    }).then(function () {
+      return self.clients.claim();
+    })
   );
 });
 
-// Fetch: Cache First strategy (offline always works)
-self.addEventListener("fetch", (event) => {
-  // Only handle same-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) return;
+self.addEventListener("fetch", function (event) {
+  var request = event.request;
+  if (request.method !== "GET") return;
+
+  var requestUrl = new URL(request.url);
+  if (requestUrl.origin !== self.location.origin) return;
+
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request).then(function (response) {
+        var copy = response.clone();
+        caches.open(CACHE_NAME).then(function (cache) {
+          cache.put("./index.html", copy);
+        });
+        return response;
+      }).catch(function () {
+        return caches.match("./index.html");
+      })
+    );
+    return;
+  }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
+    caches.match(request).then(function (cached) {
       if (cached) return cached;
-
-      // Not in cache - try network
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200) return response;
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+      return fetch(request).then(function (response) {
+        if (!response || !response.ok || response.type !== "basic") return response;
+        var copy = response.clone();
+        caches.open(CACHE_NAME).then(function (cache) {
+          cache.put(request, copy);
+        });
         return response;
-      }).catch(() => {
-        // Network failed and not cached - return offline fallback
-        if (event.request.destination === "document") {
-          return caches.match("./index.html");
-        }
       });
     })
   );

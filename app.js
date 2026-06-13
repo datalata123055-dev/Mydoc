@@ -116,6 +116,7 @@ let state = {
 let db = loadStore();
 let logoDataUrlPromise = null;
 let stampDataUrlPromise = null;
+let storageErrorShown = false;
 
 const contentEl = document.getElementById("content");
 const pageTitleEl = document.getElementById("pageTitle");
@@ -162,7 +163,18 @@ function loadStore() {
 }
 
 function saveStore() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    storageErrorShown = false;
+    return true;
+  } catch (error) {
+    console.error("Unable to save eDocument data locally", error);
+    if (!storageErrorShown) {
+      storageErrorShown = true;
+      toast("This iPad could not save locally. Free some storage and try again.", 5000);
+    }
+    return false;
+  }
 }
 
 function render() {
@@ -672,7 +684,7 @@ async function saveEditorRecord(forceStatus) {
     return;
   }
 
-  saveRecord(kind, record);
+  if (!saveRecord(kind, record)) return;
   state.mode = "list";
   state.editingId = null;
   render();
@@ -682,6 +694,7 @@ async function saveEditorRecord(forceStatus) {
 function saveRecord(kind, record) {
   const now = new Date().toISOString();
   const list = db[kind] || [];
+  const previousList = list.slice();
   let savedRecord;
   if (record.id) {
     const index = list.findIndex((row) => row.id === record.id);
@@ -693,15 +706,23 @@ function saveRecord(kind, record) {
     list.unshift(savedRecord);
   }
   db[kind] = list;
-  saveStore();
+  if (!saveStore()) {
+    db[kind] = previousList;
+    return false;
+  }
   // Firebase sync: online hone pe Firestore mein save, offline hone pe queue mein
   if (window.firebaseSync) window.firebaseSync.save(kind, savedRecord.id, savedRecord);
+  return true;
 }
 
 function deleteRecord(kind, id) {
   if (!confirm("Delete this record?")) return;
+  const previousList = db[kind] || [];
   db[kind] = (db[kind] || []).filter((row) => row.id !== id);
-  saveStore();
+  if (!saveStore()) {
+    db[kind] = previousList;
+    return;
+  }
   render();
   toast("Record deleted.");
   // Firebase sync: delete bhi queue mein ya turant
@@ -717,7 +738,7 @@ function duplicateRecord(kind, id) {
   delete copy.updatedAt;
   applyNewNumber(kind, copy);
   copy.status = defaultStatus(kind);
-  saveRecord(kind, copy);
+  if (!saveRecord(kind, copy)) return;
   render();
   toast("Record duplicated.");
 }
@@ -725,49 +746,47 @@ function duplicateRecord(kind, id) {
 async function downloadRecordPdf(kind, id) {
   const record = (db[kind] || []).find((row) => row.id === id);
   if (!record) return;
+  const previewWindow = isAppleTouchDevice() ? preparePdfWindow() : null;
   if (!isPdfReady()) {
+    closePdfWindow(previewWindow);
     downloadPrintableHtml(kind, record);
     return;
   }
-  const pdf = await buildPdf(kind, record);
-  if (!pdf) return;
-  pdf.save(pdfFileName(kind, record));
+  await runPdfAction(kind, record, "download", previewWindow);
 }
 
 async function printRecordPdf(kind, id) {
   const record = (db[kind] || []).find((row) => row.id === id);
   if (!record) return;
+  const previewWindow = preparePdfWindow();
   if (!isPdfReady()) {
-    openPrintableDocument(kind, record);
+    openPrintableDocument(kind, record, previewWindow);
     return;
   }
-  const pdf = await buildPdf(kind, record);
-  if (!pdf) return;
-  pdf.output("dataurlnewwindow");
+  await runPdfAction(kind, record, "print", previewWindow);
 }
 
 async function downloadCurrentPdf() {
   const kind = state.tab;
   const record = kind === "warrantyCards" ? warrantyFromForm() : commercialFromForm();
+  const previewWindow = isAppleTouchDevice() ? preparePdfWindow() : null;
   if (!isPdfReady()) {
+    closePdfWindow(previewWindow);
     downloadPrintableHtml(kind, record);
     return;
   }
-  const pdf = await buildPdf(kind, record);
-  if (!pdf) return;
-  pdf.save(pdfFileName(kind, record));
+  await runPdfAction(kind, record, "download", previewWindow);
 }
 
 async function printCurrentPdf() {
   const kind = state.tab;
   const record = kind === "warrantyCards" ? warrantyFromForm() : commercialFromForm();
+  const previewWindow = preparePdfWindow();
   if (!isPdfReady()) {
-    openPrintableDocument(kind, record);
+    openPrintableDocument(kind, record, previewWindow);
     return;
   }
-  const pdf = await buildPdf(kind, record);
-  if (!pdf) return;
-  pdf.output("dataurlnewwindow");
+  await runPdfAction(kind, record, "print", previewWindow);
 }
 
 async function buildPdf(kind, record) {
@@ -786,8 +805,78 @@ function isPdfReady() {
   }
 }
 
-function openPrintableDocument(kind, record) {
+async function runPdfAction(kind, record, action, previewWindow) {
+  try {
+    const pdf = await buildPdf(kind, record);
+    if (!pdf) {
+      closePdfWindow(previewWindow);
+      return;
+    }
+
+    const fileName = pdfFileName(kind, record);
+    if (action === "download" && !isAppleTouchDevice()) {
+      pdf.save(fileName);
+      return;
+    }
+
+    if (action === "print" && typeof pdf.autoPrint === "function") {
+      pdf.autoPrint();
+    }
+    openPdfPreview(pdf, previewWindow, fileName);
+    toast(action === "print"
+      ? "PDF opened for printing."
+      : "PDF opened. Use Share to save it on this iPad.");
+  } catch (error) {
+    closePdfWindow(previewWindow);
+    console.error("PDF generation failed", error);
+    toast("PDF generation failed: " + (error && error.message ? error.message : "Unknown error"), 5000);
+  }
+}
+
+function preparePdfWindow() {
   const popup = window.open("", "_blank");
+  if (!popup) return null;
+  try {
+    popup.document.open();
+    popup.document.write("<!doctype html><title>Preparing PDF</title><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:32px;color:#172033}p{font-size:18px}</style><p>Preparing PDF...</p>");
+    popup.document.close();
+  } catch (error) {
+    console.warn("Could not prepare PDF window", error);
+  }
+  return popup;
+}
+
+function closePdfWindow(popup) {
+  if (!popup || popup.closed) return;
+  try {
+    popup.close();
+  } catch (error) {
+    console.warn("Could not close PDF window", error);
+  }
+}
+
+function openPdfPreview(pdf, popup, fileName) {
+  const blob = pdf.output("blob");
+  const url = URL.createObjectURL(blob);
+  const target = popup && !popup.closed ? popup : window.open("", "_blank");
+  if (!target) {
+    URL.revokeObjectURL(url);
+    pdf.save(fileName);
+    return;
+  }
+  target.location.replace(url);
+  setTimeout(() => URL.revokeObjectURL(url), 120000);
+}
+
+function isAppleTouchDevice() {
+  const platform = navigator.platform || "";
+  const userAgent = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(userAgent)
+    || (platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function openPrintableDocument(kind, record, existingPopup) {
+  const popup = existingPopup || window.open("", "_blank");
   const html = printableHtml(kind, record);
   if (!popup) {
     downloadPrintableHtml(kind, record);
@@ -1270,13 +1359,13 @@ async function buildInvoicePdf(record) {
     ["", "CGST @ " + record.taxRate / 2 + "%", "", "", "", "", currency2(halfTax)],
     ["", "SGST @ " + record.taxRate / 2 + "%", "", "", "", "", currency2(halfTax)]
   ];
-  const columnStyles = Object.fromEntries(widths.map((width, index) => [
-    index,
-    {
+  const columnStyles = {};
+  widths.forEach((width, index) => {
+    columnStyles[index] = {
       cellWidth: width,
       halign: index === 0 || index === 2 || index === 3 || index === 4 ? "center" : index >= 5 ? "right" : "left"
-    }
-  ]));
+    };
+  });
 
   doc.autoTable({
     startY: y,
@@ -1732,7 +1821,7 @@ function normalizeCommercialRecord(kind, record) {
       ...(record.customerDetails || {})
     },
     products: Array.isArray(record.products) ? record.products : [emptyProduct()],
-    taxMode: record.taxMode ?? 18,
+    taxMode: record.taxMode === undefined || record.taxMode === null ? 18 : record.taxMode,
     customTaxRate: record.customTaxRate || 0,
     discount: record.discount || 0,
     signatory: record.signatory || COMPANY_PROFILE.name,
@@ -1870,7 +1959,7 @@ function sanitize(value) {
 }
 
 function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char]));
+  return String(value === undefined || value === null ? "" : value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char]));
 }
 
 function escapeAttr(value) {
@@ -1882,7 +1971,7 @@ function capitalize(value) {
 }
 
 function uid() {
-  if (crypto && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
   return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
 }
 
