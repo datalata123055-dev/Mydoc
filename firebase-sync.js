@@ -7,12 +7,13 @@
 // ⚠️  STEP 1: Apna Firebase config yahan paste karo
 //    Firebase Console → Project Settings → Your apps → SDK setup
 const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey:            "AIzaSyATvwM_0B9ibtD9MniIoiNuiirnC0mb2AY",
+  authDomain:        "newtechhomesolutions-b6ab6.firebaseapp.com",
+  projectId:         "newtechhomesolutions-b6ab6",
+  storageBucket:     "newtechhomesolutions-b6ab6.firebasestorage.app",
+  messagingSenderId: "1015056454392",
+  appId:             "1:1015056454392:web:69f04fb83c80cf8507e10d",
+  measurementId:     "G-2J98330E56"
 };
 
 // ⚠️  STEP 2: Firebase Console → Firestore → Rules mein ye rules lagao:
