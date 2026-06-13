@@ -1496,6 +1496,8 @@ async function buildWarrantyPdf(sourceRecord) {
 async function pdfHeader(doc, title) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 10;
+
+  // Title bar
   setPdfColor(doc, "setFillColor", PDF_BRAND.navy);
   doc.rect(0, 0, pageWidth, 13, "F");
   setPdfColor(doc, "setFillColor", PDF_BRAND.orange);
@@ -1505,45 +1507,54 @@ async function pdfHeader(doc, title) {
   setPdfColor(doc, "setTextColor", PDF_BRAND.white);
   doc.text(title, pageWidth / 2, 8.5, { align: "center" });
 
+  // Header layout: logo panel (left) + company info (right)
+  const logoAreaWidth = 52;
+  const textAreaX = margin + logoAreaWidth;
+  const textAreaWidth = pageWidth - margin - textAreaX;
+  const textCenter = textAreaX + textAreaWidth / 2;
+
+  // Logo — bigger, vertically centered in header area
   const logo = await getLogoDataUrl();
-  let logoPanelWidth = 0;
   if (logo) {
     try {
-      const dimensions = pdfImageDimensions(doc, logo, 34, 15);
-      logoPanelWidth = dimensions.width + 5;
-      doc.addImage(logo, "PNG", margin, 20, dimensions.width, dimensions.height);
+      const dimensions = pdfImageDimensions(doc, logo, 46, 24);
+      const logoX = margin + (logoAreaWidth - dimensions.width) / 2;
+      const logoY = 18 + (28 - dimensions.height) / 2;
+      doc.addImage(logo, "PNG", logoX, logoY, dimensions.width, dimensions.height);
     } catch (error) {
       console.warn("Could not add PDF logo", error);
     }
   }
 
+  // Company name — centered in the right text area
   setPdfColor(doc, "setTextColor", PDF_BRAND.navy);
-  doc.setFontSize(16);
+  doc.setFontSize(15);
   doc.setFont("helvetica", "bold");
-  doc.text(COMPANY_PROFILE.name.toUpperCase(), pageWidth / 2, 22, { align: "center" });
+  doc.text(COMPANY_PROFILE.name.toUpperCase(), textCenter, 24, { align: "center" });
+
   setPdfColor(doc, "setTextColor", PDF_BRAND.orange);
   doc.setFontSize(8);
   doc.setFont("helvetica", "bolditalic");
-  doc.text(COMPANY_PROFILE.tagline, pageWidth / 2, 26.5, { align: "center" });
+  doc.text(COMPANY_PROFILE.tagline, textCenter, 28.5, { align: "center" });
 
-  const detailsX = margin + logoPanelWidth;
-  const detailsWidth = pageWidth - margin - detailsX;
-  const detailsCenter = detailsX + detailsWidth / 2;
+  // Company details box — full width under the logo+name area
   setPdfColor(doc, "setFillColor", PDF_BRAND.sky);
   setPdfColor(doc, "setDrawColor", PDF_BRAND.line);
-  doc.roundedRect(detailsX, 29, detailsWidth, 17.5, 2, 2, "FD");
+  doc.roundedRect(margin, 31, pageWidth - margin * 2, 17.5, 2, 2, "FD");
+  const fullCenter = pageWidth / 2;
   setPdfColor(doc, "setTextColor", PDF_BRAND.ink);
   doc.setFontSize(7.3);
   doc.setFont("helvetica", "normal");
-  doc.text("Office : " + COMPANY_PROFILE.officeAddress, detailsCenter, 33, { align: "center" });
-  doc.text("Factory : " + COMPANY_PROFILE.address, detailsCenter, 36.8, { align: "center" });
-  doc.text("Email : " + COMPANY_PROFILE.email + "   |   Website : " + COMPANY_PROFILE.website, detailsCenter, 40.6, { align: "center" });
-  doc.text("Contact Number : " + COMPANY_PROFILE.contacts.join(", ") + "   |   Our GST : " + COMPANY_PROFILE.gstNumber, detailsCenter, 44.4, { align: "center" });
+  doc.text("Office : " + COMPANY_PROFILE.officeAddress, fullCenter, 35, { align: "center" });
+  doc.text("Factory : " + COMPANY_PROFILE.address, fullCenter, 38.8, { align: "center" });
+  doc.text("Email : " + COMPANY_PROFILE.email + "   |   Website : " + COMPANY_PROFILE.website, fullCenter, 42.6, { align: "center" });
+  doc.text("Contact Number : " + COMPANY_PROFILE.contacts.join(", ") + "   |   Our GST : " + COMPANY_PROFILE.gstNumber, fullCenter, 46.4, { align: "center" });
+
   setPdfColor(doc, "setDrawColor", PDF_BRAND.orange);
   doc.setLineWidth(0.7);
-  doc.line(margin, 49, pageWidth - margin, 49);
+  doc.line(margin, 51, pageWidth - margin, 51);
   doc.setTextColor(0, 0, 0);
-  return 51;
+  return 53;
 }
 
 function pdfImageDimensions(doc, dataUrl, maxWidth, maxHeight) {
