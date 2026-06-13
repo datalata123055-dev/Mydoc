@@ -31,16 +31,16 @@
         <button class="nav-btn" data-tab="invoices" type="button">Tax Invoices</button>
         <button class="nav-btn" data-tab="warrantyCards" type="button">Warranty Cards</button>
       </nav>
-      <div class="transfer-box">
-        <strong>Transfer</strong>
-        <p>Export or import JSON records when moving this module into eDocument.</p>
-        <div class="stack">
-          <button class="btn btn-secondary" id="exportBtn" type="button">Export JSON</button>
-          <label class="btn btn-secondary file-btn">
-            Import JSON
-            <input id="importInput" type="file" accept="application/json,.json" />
-          </label>
-        </div>
+      <div class="transfer-pills">
+        <button class="pill-btn" id="exportBtn" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </button>
+        <label class="pill-btn file-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Import
+          <input id="importInput" type="file" accept="application/json,.json" />
+        </label>
       </div>
     </aside>
 
@@ -66,6 +66,7 @@
   <script src="libs/jspdf.umd.min.js"></script>
   <script src="libs/jspdf.plugin.autotable.min.js"></script>
   <script src="offline-indicator.js"></script>
+  <script src="firebase-sync.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

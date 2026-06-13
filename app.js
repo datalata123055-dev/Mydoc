@@ -682,16 +682,20 @@ async function saveEditorRecord(forceStatus) {
 function saveRecord(kind, record) {
   const now = new Date().toISOString();
   const list = db[kind] || [];
+  let savedRecord;
   if (record.id) {
     const index = list.findIndex((row) => row.id === record.id);
-    const merged = { ...(index >= 0 ? list[index] : {}), ...record, updatedAt: now };
-    if (index >= 0) list[index] = merged;
-    else list.unshift(merged);
+    savedRecord = { ...(index >= 0 ? list[index] : {}), ...record, updatedAt: now };
+    if (index >= 0) list[index] = savedRecord;
+    else list.unshift(savedRecord);
   } else {
-    list.unshift({ ...record, id: uid(), createdAt: now, updatedAt: now });
+    savedRecord = { ...record, id: uid(), createdAt: now, updatedAt: now };
+    list.unshift(savedRecord);
   }
   db[kind] = list;
   saveStore();
+  // Firebase sync: online hone pe Firestore mein save, offline hone pe queue mein
+  if (window.firebaseSync) window.firebaseSync.save(kind, savedRecord.id, savedRecord);
 }
 
 function deleteRecord(kind, id) {
@@ -700,6 +704,8 @@ function deleteRecord(kind, id) {
   saveStore();
   render();
   toast("Record deleted.");
+  // Firebase sync: delete bhi queue mein ya turant
+  if (window.firebaseSync) window.firebaseSync.delete(kind, id);
 }
 
 function duplicateRecord(kind, id) {
@@ -1526,21 +1532,22 @@ async function pdfHeader(doc, title) {
     }
   }
 
-  // Company name — centered in the right text area
+  // Company name — centered on full page width
   setPdfColor(doc, "setTextColor", PDF_BRAND.navy);
   doc.setFontSize(15);
   doc.setFont("helvetica", "bold");
-  doc.text(COMPANY_PROFILE.name.toUpperCase(), textCenter, 24, { align: "center" });
+  doc.text(COMPANY_PROFILE.name.toUpperCase(), pageWidth / 2, 22, { align: "center" });
 
+  // Tagline — centered on full page width
   setPdfColor(doc, "setTextColor", PDF_BRAND.orange);
   doc.setFontSize(8);
   doc.setFont("helvetica", "bolditalic");
   doc.text(COMPANY_PROFILE.tagline, textCenter, 28.5, { align: "center" });
 
-  // Company details box — full width under the logo+name area
+  // Company details box — full width, properly below logo & name
   setPdfColor(doc, "setFillColor", PDF_BRAND.sky);
   setPdfColor(doc, "setDrawColor", PDF_BRAND.line);
-  doc.roundedRect(margin, 31, pageWidth - margin * 2, 17.5, 2, 2, "FD");
+  doc.roundedRect(margin, 30, pageWidth - margin * 2, 17.5, 2, 2, "FD");
   const fullCenter = pageWidth / 2;
   setPdfColor(doc, "setTextColor", PDF_BRAND.ink);
   doc.setFontSize(7.3);
@@ -1555,6 +1562,16 @@ async function pdfHeader(doc, title) {
   doc.line(margin, 51, pageWidth - margin, 51);
   doc.setTextColor(0, 0, 0);
   return 53;
+  doc.text("Office : " + COMPANY_PROFILE.officeAddress, fullCenter, 34, { align: "center" });
+  doc.text("Factory : " + COMPANY_PROFILE.address, fullCenter, 37.8, { align: "center" });
+  doc.text("Email : " + COMPANY_PROFILE.email + "   |   Website : " + COMPANY_PROFILE.website, fullCenter, 41.6, { align: "center" });
+  doc.text("Contact Number : " + COMPANY_PROFILE.contacts.join(", ") + "   |   Our GST : " + COMPANY_PROFILE.gstNumber, fullCenter, 45.4, { align: "center" });
+
+  setPdfColor(doc, "setDrawColor", PDF_BRAND.orange);
+  doc.setLineWidth(0.7);
+  doc.line(margin, 50, pageWidth - margin, 50);
+  doc.setTextColor(0, 0, 0);
+  return 52;
 }
 
 function pdfImageDimensions(doc, dataUrl, maxWidth, maxHeight) {
