@@ -2,56 +2,37 @@
   "name": "NewTech eDocument Generator",
   "short_name": "eDoc Generator",
   "description": "Professional document generator for quotations, tax invoices, and warranty cards",
-  "start_url": "/",
-  "scope": "/",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#ffffff",
   "theme_color": "#1e3a8a",
   "icons": [
     {
-      "src": "assets/logo.png",
+      "src": "assets/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "assets/logo.png",
+      "src": "assets/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "assets/logo.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
   "categories": ["productivity", "business"],
-  "screenshots": [
-    {
-      "src": "assets/logo.png",
-      "type": "image/png",
-      "sizes": "540x720",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "assets/logo.png",
-      "type": "image/png",
-      "sizes": "1280x720",
-      "form_factor": "wide"
-    }
-  ],
   "shortcuts": [
     {
       "name": "New Quotation",
       "short_name": "Quotation",
       "description": "Create a new quotation document",
-      "url": "/?tab=quotations",
+      "url": "./?tab=quotations",
       "icons": [
         {
-          "src": "assets/logo.png",
+          "src": "assets/icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -61,10 +42,10 @@
       "name": "New Tax Invoice",
       "short_name": "Invoice",
       "description": "Create a new tax invoice document",
-      "url": "/?tab=invoices",
+      "url": "./?tab=invoices",
       "icons": [
         {
-          "src": "assets/logo.png",
+          "src": "assets/icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -74,10 +55,10 @@
       "name": "New Warranty Card",
       "short_name": "Warranty",
       "description": "Create a new warranty card",
-      "url": "/?tab=warrantyCards",
+      "url": "./?tab=warrantyCards",
       "icons": [
         {
-          "src": "assets/logo.png",
+          "src": "assets/icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }

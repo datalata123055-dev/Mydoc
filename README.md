@@ -13,17 +13,26 @@ Standalone document-generation project extracted from the NewTech admin dashboar
 
 ## Files
 
-- `index.html` - app shell and CDN dependencies.
+- `index.html` - app shell and local offline dependencies.
 - `styles.css` - standalone UI styles.
 - `app.js` - document logic, storage, PDF generation, and JSON transfer.
+- `compat.js` - compatibility fallbacks for older iPad Safari versions.
+- `service-worker.js` - complete offline app-shell cache.
 - `assets/logo.png` - NewTech logo used in the app and PDFs.
 - `assets/company-stamp.png` - company stamp used in PDF and printable signatures.
 
 ## Run
 
-Open `index.html` in a browser. No build step is required.
+Serve the folder over HTTP/HTTPS. No build step is required. Service workers do not run from a plain `file://` URL.
 
-Direct PDF export uses the jsPDF CDN loaded in `index.html`. If the CDN is blocked, the app falls back to a printable HTML document that can be opened and saved as PDF from the browser print dialog.
+All PDF libraries, fonts, logo, stamp, and app files are self-hosted. After one successful online visit, the app works offline and falls back to printable HTML if the PDF library is unavailable.
+
+## Older iPad Use
+
+- Open the deployed HTTPS URL once while online, then use Safari's **Add to Home Screen** action.
+- iOS 11.3 or newer is required for service-worker offline caching.
+- The interface includes 44px touch targets, safe-area spacing, 16px form controls, and iPad-compatible PDF preview/share behavior.
+- Records are stored locally. Use **Export** regularly as a backup, especially before clearing Safari website data.
 
 ## Deploy to Vercel
 

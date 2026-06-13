@@ -43,7 +43,13 @@ function getQueue() {
 }
 
 function setQueue(queue) {
-  localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+  try {
+    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+    return true;
+  } catch (error) {
+    console.warn('[Firebase] Queue could not be stored locally:', error);
+    return false;
+  }
 }
 
 function addToQueue(operation) {
@@ -54,8 +60,9 @@ function addToQueue(operation) {
   );
   if (idx >= 0) queue[idx] = operation;
   else queue.push(operation);
-  setQueue(queue);
+  if (!setQueue(queue)) return false;
   console.log(`[Firebase] Queued (${queue.length} pending):`, operation.type, operation.collection, operation.id);
+  return true;
 }
 
 // --- Firebase loader (sirf online hone pe load hoga) ---

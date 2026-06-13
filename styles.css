@@ -17,11 +17,18 @@
   box-sizing: border-box;
 }
 
+html {
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
+  min-height: 100%;
   background: var(--bg);
   color: var(--ink);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-tap-highlight-color: rgba(249, 115, 22, 0.2);
 }
 
 button,
@@ -33,15 +40,19 @@ textarea {
 
 button {
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-appearance: none;
 }
 
 .shell {
   display: grid;
   grid-template-columns: 268px 1fr;
   min-height: 100vh;
+  min-height: -webkit-fill-available;
 }
 
 .sidebar {
+  position: -webkit-sticky;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -49,6 +60,10 @@ button {
   flex-direction: column;
   gap: 22px;
   padding: 18px;
+  padding-top: calc(18px + constant(safe-area-inset-top));
+  padding-top: calc(18px + env(safe-area-inset-top));
+  padding-left: calc(18px + constant(safe-area-inset-left));
+  padding-left: calc(18px + env(safe-area-inset-left));
   background: #102a67;
   color: #ffffff;
 }
@@ -89,6 +104,7 @@ button {
 
 .nav-btn {
   width: 100%;
+  min-height: 44px;
   border: 0;
   border-radius: 8px;
   padding: 12px;
@@ -119,6 +135,7 @@ button {
   gap: 6px;
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 999px;
+  min-height: 44px;
   padding: 8px 14px;
   background: rgba(255, 255, 255, 0.12);
   color: #e2e8f0;
@@ -150,6 +167,7 @@ button {
 }
 
 .topbar {
+  position: -webkit-sticky;
   position: sticky;
   top: 0;
   z-index: 20;
@@ -161,6 +179,7 @@ button {
   padding: 16px 28px;
   background: rgba(255, 255, 255, 0.94);
   border-bottom: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
 
@@ -200,7 +219,7 @@ h1 {
 
 .btn {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -304,7 +323,7 @@ h1 {
 
 .filters input,
 .filters select {
-  min-height: 40px;
+  min-height: 44px;
   min-width: 180px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -315,6 +334,7 @@ h1 {
 
 .table-wrap {
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -432,7 +452,7 @@ tr:last-child td {
 .field select,
 .field textarea {
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 9px 11px;
@@ -474,6 +494,7 @@ tr:last-child td {
 }
 
 .summary-bar {
+  position: -webkit-sticky;
   position: sticky;
   bottom: 0;
   z-index: 10;
@@ -486,6 +507,7 @@ tr:last-child td {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 -10px 28px rgba(15, 23, 42, 0.08);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
 
@@ -517,6 +539,8 @@ tr:last-child td {
   position: fixed;
   right: 18px;
   bottom: 18px;
+  bottom: calc(18px + constant(safe-area-inset-bottom));
+  bottom: calc(18px + env(safe-area-inset-bottom));
   z-index: 50;
   display: grid;
   gap: 8px;
@@ -532,6 +556,64 @@ tr:last-child td {
   font-weight: 700;
 }
 
+.offline-indicator {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1000;
+  min-height: 44px;
+  padding: 12px 16px;
+  padding-top: calc(12px + constant(safe-area-inset-top));
+  padding-top: calc(12px + env(safe-area-inset-top));
+  background: #b91c1c;
+  color: #ffffff;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+}
+
+body.offline .offline-indicator {
+  display: block;
+}
+
+body.offline .shell {
+  padding-top: calc(44px + constant(safe-area-inset-top));
+  padding-top: calc(44px + env(safe-area-inset-top));
+}
+
+.app-update-notice {
+  position: fixed;
+  z-index: 1001;
+  right: 18px;
+  bottom: 18px;
+  bottom: calc(18px + constant(safe-area-inset-bottom));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 36px);
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.app-update-notice button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  padding: 9px 13px;
+  background: var(--navy);
+  color: #ffffff;
+  font-weight: 800;
+}
+
 @media (max-width: 1080px) {
   .shell {
     grid-template-columns: 1fr;
@@ -540,6 +622,8 @@ tr:last-child td {
   .sidebar {
     position: static;
     height: auto;
+    padding-right: calc(18px + constant(safe-area-inset-right));
+    padding-right: calc(18px + env(safe-area-inset-right));
   }
 
   .nav {
@@ -557,6 +641,12 @@ tr:last-child td {
   .kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 @media (max-width: 680px) {
@@ -569,6 +659,12 @@ tr:last-child td {
 
   .content {
     padding: 18px;
+    padding-right: calc(18px + constant(safe-area-inset-right));
+    padding-right: calc(18px + env(safe-area-inset-right));
+    padding-bottom: calc(24px + constant(safe-area-inset-bottom));
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+    padding-left: calc(18px + constant(safe-area-inset-left));
+    padding-left: calc(18px + env(safe-area-inset-left));
   }
 
   .nav,
@@ -584,5 +680,11 @@ tr:last-child td {
   .top-actions .btn,
   .form-actions .btn {
     width: 100%;
+  }
+
+  .app-update-notice {
+    left: 18px;
+    right: 18px;
+    justify-content: space-between;
   }
 }
