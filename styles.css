@@ -104,19 +104,40 @@ button {
   color: #ffffff;
 }
 
-.transfer-box {
+/* ── Transfer Pill Buttons ── */
+.transfer-pills {
   margin-top: auto;
-  padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  gap: 8px;
 }
 
-.transfer-box p {
-  margin: 8px 0 12px;
-  color: #dbeafe;
+.pill-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
   font-size: 13px;
-  line-height: 1.5;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.pill-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+}
+
+.pill-btn svg {
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .stack {
@@ -525,7 +546,7 @@ tr:last-child td {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .transfer-box {
+  .transfer-pills {
     margin-top: 0;
   }
 
