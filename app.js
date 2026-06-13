@@ -682,16 +682,20 @@ async function saveEditorRecord(forceStatus) {
 function saveRecord(kind, record) {
   const now = new Date().toISOString();
   const list = db[kind] || [];
+  let savedRecord;
   if (record.id) {
     const index = list.findIndex((row) => row.id === record.id);
-    const merged = { ...(index >= 0 ? list[index] : {}), ...record, updatedAt: now };
-    if (index >= 0) list[index] = merged;
-    else list.unshift(merged);
+    savedRecord = { ...(index >= 0 ? list[index] : {}), ...record, updatedAt: now };
+    if (index >= 0) list[index] = savedRecord;
+    else list.unshift(savedRecord);
   } else {
-    list.unshift({ ...record, id: uid(), createdAt: now, updatedAt: now });
+    savedRecord = { ...record, id: uid(), createdAt: now, updatedAt: now };
+    list.unshift(savedRecord);
   }
   db[kind] = list;
   saveStore();
+  // Firebase sync: online hone pe Firestore mein save, offline hone pe queue mein
+  if (window.firebaseSync) window.firebaseSync.save(kind, savedRecord.id, savedRecord);
 }
 
 function deleteRecord(kind, id) {
@@ -700,6 +704,8 @@ function deleteRecord(kind, id) {
   saveStore();
   render();
   toast("Record deleted.");
+  // Firebase sync: delete bhi queue mein ya turant
+  if (window.firebaseSync) window.firebaseSync.delete(kind, id);
 }
 
 function duplicateRecord(kind, id) {
