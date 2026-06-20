@@ -32,11 +32,17 @@ const FIREBASE_CONFIG = {
 // ============================================================
 
 const SYNC_QUEUE_KEY = 'newtech-sync-queue-v1';
+const NUMBER_FIELDS = {
+  quotations: 'quotationNumber',
+  invoices: 'invoiceNumber',
+  warrantyCards: 'serialNo'
+};
 let _firestore = null;
 let _auth = null;
 let _syncing = false;
 let _subscriptionCollections = [];
 let _subscriptionHandler = null;
+let _syncedRecordHandler = null;
 const _listeners = {};
 
 // --- Queue helpers ---
@@ -107,13 +113,31 @@ async function initFirebase() {
 
 // --- Single operation sync ---
 
+async function prepareOperation(op, db) {
+  if (op.type !== 'upsert' || !op.data) return op;
+  const data = cleanForFirestore(op.data);
+  const field = NUMBER_FIELDS[op.collection];
+  if (field && String(data[field] || '').includes('-OFF-')) {
+    const officialNumber = await reserveNumberWithDb(db, op.collection);
+    if (officialNumber) data[field] = officialNumber;
+  }
+  return { ...op, data };
+}
+
 async function runOperation(op, db) {
   const ref = db.collection(op.collection).doc(op.id);
   if (op.type === 'upsert') {
     await ref.set(cleanForFirestore(op.data), { merge: true });
+    notifySyncedRecord(op.collection, op.id, op.data);
   } else if (op.type === 'delete') {
     await ref.delete();
   }
+}
+
+function notifySyncedRecord(collection, id, data) {
+  if (typeof _syncedRecordHandler !== 'function' || !data) return;
+  try { _syncedRecordHandler(collection, { ...data, id }); }
+  catch (error) { console.warn('[Firebase] Synced record handler failed:', error); }
 }
 
 function cleanForFirestore(value) {
@@ -145,28 +169,30 @@ async function syncPendingQueue() {
     let synced = 0;
 
     for (const op of queue) {
+      let prepared = op;
       try {
-        await runOperation(op, db);
+        prepared = await prepareOperation(op, db);
+        await runOperation(prepared, db);
         synced++;
       } catch (e) {
         console.warn('[Firebase] Operation failed, retrying later:', e);
-        failed.push(op);
+        failed.push(prepared);
       }
     }
 
     setQueue(failed);
 
+    updatePendingBadge();
     if (synced > 0) {
       console.log(`[Firebase] ✅ Synced ${synced} record(s) to Firestore`);
       // App ka toast function use karo agar available ho
       if (typeof toast === 'function') {
         toast(`☁️ ${synced} record${synced > 1 ? 's' : ''} Firestore mein sync ho gaya!`);
       }
-      // Pending count badge update karo
-      updatePendingBadge();
     }
   } catch (e) {
     console.error('[Firebase] Sync error:', e);
+    updatePendingBadge();
   }
   _syncing = false;
 }
@@ -179,7 +205,8 @@ async function saveToFirebase(collection, id, data) {
     try {
       const db = await initFirebase();
       if (db) {
-        await runOperation(op, db);
+        const prepared = await prepareOperation(op, db);
+        await runOperation(prepared, db);
         console.log('[Firebase] ✅ Saved to Firestore:', collection, id);
         updatePendingBadge();
         return;
@@ -249,6 +276,10 @@ function formatReservedNumber(collection, sequence, year) {
 async function reserveNumber(collection) {
   const db = await initFirebase();
   if (!db) return null;
+  return reserveNumberWithDb(db, collection);
+}
+
+async function reserveNumberWithDb(db, collection) {
   const year = new Date().getFullYear();
   const counterId = `${collection}-${year}`;
   const counterRef = db.collection('documentCounters').doc(counterId);
@@ -264,6 +295,12 @@ async function reserveNumber(collection) {
     }, { merge: true });
     return formatReservedNumber(collection, sequence, year);
   });
+}
+
+function configure(options) {
+  if (options && typeof options.onSyncedRecord === 'function') {
+    _syncedRecordHandler = options.onSyncedRecord;
+  }
 }
 
 // --- Pending badge (offline indicator ke saath) ---
@@ -317,6 +354,7 @@ if (document.readyState === 'loading') {
 window.firebaseSync = {
   save:            saveToFirebase,
   delete:          deleteFromFirebase,
+  configure,
   subscribeCollections,
   reserveNumber,
   getPendingUpserts: pendingUpserts,

@@ -184,7 +184,21 @@ function saveStore() {
 
 function startSharedDocumentSync() {
   if (!window.firebaseSync || typeof window.firebaseSync.subscribeCollections !== "function") return;
+  if (typeof window.firebaseSync.configure === "function") {
+    window.firebaseSync.configure({ onSyncedRecord: applySyncedRecord });
+  }
   window.firebaseSync.subscribeCollections(Object.keys(DOCUMENTS), applyRemoteRecords);
+}
+
+function applySyncedRecord(kind, record) {
+  if (!DOCUMENTS[kind] || !record || !record.id) return;
+  const list = db[kind] || [];
+  const index = list.findIndex((row) => row.id === record.id);
+  if (index >= 0) list[index] = { ...list[index], ...record };
+  else list.unshift(record);
+  db[kind] = list;
+  saveStore();
+  if (state.tab === kind && state.mode === "list") renderList();
 }
 
 function applyRemoteRecords(kind, rows) {
