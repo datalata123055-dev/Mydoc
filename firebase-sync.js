@@ -75,6 +75,28 @@ function addToQueue(operation) {
   return true;
 }
 
+function extractSequence(collection, value, year) {
+  const text = String(value || '');
+  if (text.includes('-OFF-') || text.includes('/OFF-')) return 0;
+  let match = null;
+  if (collection === 'quotations') match = text.match(new RegExp('^NTHS-' + year + '-(\\d+)$'));
+  if (collection === 'invoices') match = text.match(new RegExp('^' + year + '-' + String(year + 1).slice(2) + '/(\\d+)$'));
+  if (collection === 'warrantyCards') match = text.match(new RegExp('^WC-' + year + '-(\\d+)$'));
+  return match ? Number(match[1] || 0) : 0;
+}
+
+async function maxExistingSequence(db, collection, year) {
+  const field = NUMBER_FIELDS[collection];
+  if (!field) return 0;
+  try {
+    const snapshot = await db.collection(collection).limit(500).get();
+    return snapshot.docs.reduce((max, doc) => Math.max(max, extractSequence(collection, doc.data()[field], year)), 0);
+  } catch (error) {
+    console.warn('[Firebase] Could not read existing document numbers:', error);
+    return 0;
+  }
+}
+
 // --- Firebase loader (sirf online hone pe load hoga) ---
 
 function loadScript(src) {
@@ -118,8 +140,12 @@ async function prepareOperation(op, db) {
   const data = cleanForFirestore(op.data);
   const field = NUMBER_FIELDS[op.collection];
   if (field && String(data[field] || '').includes('-OFF-')) {
-    const officialNumber = await reserveNumberWithDb(db, op.collection);
-    if (officialNumber) data[field] = officialNumber;
+    try {
+      const officialNumber = await reserveNumberWithDb(db, op.collection);
+      if (officialNumber) data[field] = officialNumber;
+    } catch (error) {
+      console.warn('[Firebase] Official number reserve failed; syncing with current number:', error);
+    }
   }
   return { ...op, data };
 }
@@ -283,10 +309,11 @@ async function reserveNumberWithDb(db, collection) {
   const year = new Date().getFullYear();
   const counterId = `${collection}-${year}`;
   const counterRef = db.collection('documentCounters').doc(counterId);
+  const existingMax = await maxExistingSequence(db, collection, year);
   return db.runTransaction(async transaction => {
     const snapshot = await transaction.get(counterRef);
     const current = snapshot.exists ? Number(snapshot.data().next || 1) : 1;
-    const sequence = current > 0 ? current : 1;
+    const sequence = Math.max(current > 0 ? current : 1, existingMax + 1);
     transaction.set(counterRef, {
       collection,
       year,

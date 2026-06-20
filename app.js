@@ -1968,8 +1968,8 @@ async function ensureDocumentNumber(kind, record) {
 function generateQuotationNumber() {
   if (!navigator.onLine) return generateOfflineNumber("quotations");
   const year = new Date().getFullYear();
-  const count = (db.quotations || []).filter((row) => String(row.quotationNumber || "").includes("NTHS-" + year)).length + 1;
-  return "NTHS-" + year + "-" + String(count).padStart(4, "0");
+  const next = maxDocumentSequence("quotations", year) + 1;
+  return "NTHS-" + year + "-" + String(next).padStart(4, "0");
 }
 
 function generateInvoiceNumber() {
@@ -1977,15 +1977,31 @@ function generateInvoiceNumber() {
   const year = new Date().getFullYear();
   const nextYear = String(year + 1).slice(2);
   const prefix = year + "-" + nextYear;
-  const count = (db.invoices || []).filter((row) => String(row.invoiceNumber || "").startsWith(prefix)).length + 1;
-  return prefix + "/" + String(count).padStart(3, "0");
+  const next = maxDocumentSequence("invoices", year) + 1;
+  return prefix + "/" + String(next).padStart(3, "0");
 }
 
 function generateWarrantySerial() {
   if (!navigator.onLine) return generateOfflineNumber("warrantyCards");
   const year = new Date().getFullYear();
-  const count = (db.warrantyCards || []).filter((row) => String(row.serialNo || "").includes("WC-" + year)).length + 1;
-  return "WC-" + year + "-" + String(count).padStart(4, "0");
+  const next = maxDocumentSequence("warrantyCards", year) + 1;
+  return "WC-" + year + "-" + String(next).padStart(4, "0");
+}
+
+function maxDocumentSequence(kind, year) {
+  const meta = DOCUMENTS[kind];
+  if (!meta) return 0;
+  return (db[kind] || []).reduce((max, row) => Math.max(max, extractDocumentSequence(kind, row[meta.numberField], year)), 0);
+}
+
+function extractDocumentSequence(kind, value, year) {
+  const text = String(value || "");
+  if (text.includes("-OFF-") || text.includes("/OFF-")) return 0;
+  let match = null;
+  if (kind === "quotations") match = text.match(new RegExp("^NTHS-" + year + "-(\\d+)$"));
+  if (kind === "invoices") match = text.match(new RegExp("^" + year + "-" + String(year + 1).slice(2) + "/(\\d+)$"));
+  if (kind === "warrantyCards") match = text.match(new RegExp("^WC-" + year + "-(\\d+)$"));
+  return match ? num(match[1]) : 0;
 }
 
 function generateOfflineNumber(kind) {
