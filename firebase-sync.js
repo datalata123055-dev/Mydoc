@@ -33,7 +33,11 @@ const FIREBASE_CONFIG = {
 
 const SYNC_QUEUE_KEY = 'newtech-sync-queue-v1';
 let _firestore = null;
+let _auth = null;
 let _syncing = false;
+let _subscriptionCollections = [];
+let _subscriptionHandler = null;
+const _listeners = {};
 
 // --- Queue helpers ---
 
@@ -83,9 +87,15 @@ async function initFirebase() {
   if (!navigator.onLine) return null;
   try {
     await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js');
     await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js');
     if (!window.firebase) throw new Error('Firebase SDK load nahi hua');
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    _auth = firebase.auth();
+    if (!_auth.currentUser) {
+      try { await _auth.signInAnonymously(); }
+      catch (authError) { console.warn('[Firebase] Anonymous auth failed:', authError.message); }
+    }
     _firestore = firebase.firestore();
     console.log('[Firebase] ✅ Connected to Firestore');
     return _firestore;
@@ -187,6 +197,62 @@ async function deleteFromFirebase(collection, id) {
   updatePendingBadge();
 }
 
+// --- Live shared Firestore records ---
+
+function pendingUpserts(collection) {
+  return getQueue()
+    .filter(op => op.type === 'upsert' && op.collection === collection && op.data)
+    .map(op => op.data);
+}
+
+async function subscribeCollections(collections, onData) {
+  _subscriptionCollections = collections;
+  _subscriptionHandler = onData;
+  const db = await initFirebase();
+  if (!db) return false;
+
+  collections.forEach(collection => {
+    if (_listeners[collection]) _listeners[collection]();
+    _listeners[collection] = db.collection(collection)
+      .orderBy('createdAt', 'desc')
+      .limit(300)
+      .onSnapshot(snapshot => {
+        const rows = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        onData(collection, rows);
+      }, error => {
+        console.warn(`[Firebase] Listener failed for ${collection}:`, error);
+      });
+  });
+  return true;
+}
+
+function formatReservedNumber(collection, sequence, year) {
+  if (collection === 'quotations') return `NTHS-${year}-${String(sequence).padStart(4, '0')}`;
+  if (collection === 'invoices') return `${year}-${String(year + 1).slice(2)}/${String(sequence).padStart(3, '0')}`;
+  if (collection === 'warrantyCards') return `WC-${year}-${String(sequence).padStart(4, '0')}`;
+  return String(sequence);
+}
+
+async function reserveNumber(collection) {
+  const db = await initFirebase();
+  if (!db) return null;
+  const year = new Date().getFullYear();
+  const counterId = `${collection}-${year}`;
+  const counterRef = db.collection('documentCounters').doc(counterId);
+  return db.runTransaction(async transaction => {
+    const snapshot = await transaction.get(counterRef);
+    const current = snapshot.exists ? Number(snapshot.data().next || 1) : 1;
+    const sequence = current > 0 ? current : 1;
+    transaction.set(counterRef, {
+      collection,
+      year,
+      next: sequence + 1,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    return formatReservedNumber(collection, sequence, year);
+  });
+}
+
 // --- Pending badge (offline indicator ke saath) ---
 
 function updatePendingBadge() {
@@ -217,6 +283,9 @@ function updatePendingBadge() {
 window.addEventListener('online', () => {
   console.log('[Firebase] Online! Syncing pending queue...');
   setTimeout(syncPendingQueue, 1500); // connection stable hone ka intezaar
+  if (_subscriptionCollections.length && _subscriptionHandler) {
+    setTimeout(() => subscribeCollections(_subscriptionCollections, _subscriptionHandler), 2200);
+  }
 });
 
 // Page load pe bhi try karo (agar pehle se online ho)
@@ -235,6 +304,9 @@ if (document.readyState === 'loading') {
 window.firebaseSync = {
   save:            saveToFirebase,
   delete:          deleteFromFirebase,
+  subscribeCollections,
+  reserveNumber,
+  getPendingUpserts: pendingUpserts,
   syncNow:         syncPendingQueue,
   getPendingCount: () => getQueue().length,
 };

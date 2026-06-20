@@ -1,4 +1,7 @@
 const STORAGE_KEY = "newtech-edocument-generator-v1";
+const NUMBER_COUNTER_KEY = "newtech-edocument-number-counters-v1";
+const DEVICE_ID_KEY = "newtech-edocument-device-id-v1";
+const SITE_NUMBER_CODE = "MDOC";
 
 const COMPANY_PROFILE = {
   name: "NewTech Home Solutions",
@@ -110,7 +113,8 @@ let state = {
   mode: "list",
   editingId: null,
   query: "",
-  filter: ""
+  filter: "",
+  pendingDelete: null
 };
 
 let db = loadStore();
@@ -144,6 +148,7 @@ document.getElementById("exportBtn").addEventListener("click", exportJson);
 document.getElementById("importInput").addEventListener("change", importJson);
 
 render();
+startSharedDocumentSync();
 
 function loadStore() {
   const empty = { quotations: [], invoices: [], warrantyCards: [] };
@@ -175,6 +180,25 @@ function saveStore() {
     }
     return false;
   }
+}
+
+function startSharedDocumentSync() {
+  if (!window.firebaseSync || typeof window.firebaseSync.subscribeCollections !== "function") return;
+  window.firebaseSync.subscribeCollections(Object.keys(DOCUMENTS), applyRemoteRecords);
+}
+
+function applyRemoteRecords(kind, rows) {
+  if (!DOCUMENTS[kind]) return;
+  const byId = new Map((rows || []).map((row) => [row.id, row]));
+  const pending = window.firebaseSync && typeof window.firebaseSync.getPendingUpserts === "function"
+    ? window.firebaseSync.getPendingUpserts(kind)
+    : [];
+  pending.forEach((row) => {
+    if (row && row.id) byId.set(row.id, row);
+  });
+  db[kind] = [...byId.values()];
+  saveStore();
+  if (state.tab === kind && state.mode === "list") renderList();
 }
 
 function render() {
@@ -325,13 +349,16 @@ function customerCell(row) {
 }
 
 function actionsHtml(kind, id) {
+  const pending = state.pendingDelete === `${kind}:${id}`;
   return `
     <div class="row-actions">
       <button class="btn btn-secondary" type="button" onclick="openEditor('${kind}', '${id}')">Edit</button>
       <button class="btn btn-secondary" type="button" onclick="duplicateRecord('${kind}', '${id}')">Duplicate</button>
       <button class="btn btn-secondary" type="button" onclick="downloadRecordPdf('${kind}', '${id}')">PDF</button>
       <button class="btn btn-secondary" type="button" onclick="printRecordPdf('${kind}', '${id}')">Print</button>
-      <button class="btn btn-danger" type="button" onclick="deleteRecord('${kind}', '${id}')">Delete</button>
+      ${pending
+        ? `<button class="btn btn-danger" type="button" onclick="confirmDeleteRecord('${kind}', '${id}')">OK Delete</button><button class="btn btn-secondary" type="button" onclick="cancelDeleteRecord()">Cancel</button>`
+        : `<button class="btn btn-danger" type="button" onclick="beginDeleteRecord('${kind}', '${id}')">Delete</button>`}
     </div>
   `;
 }
@@ -684,6 +711,7 @@ async function saveEditorRecord(forceStatus) {
     return;
   }
 
+  await ensureDocumentNumber(kind, record);
   if (!saveRecord(kind, record)) return;
   state.mode = "list";
   state.editingId = null;
@@ -715,8 +743,23 @@ function saveRecord(kind, record) {
   return true;
 }
 
+function beginDeleteRecord(kind, id) {
+  state.pendingDelete = `${kind}:${id}`;
+  renderList();
+  toast("Click OK Delete to confirm.");
+}
+
+function cancelDeleteRecord() {
+  state.pendingDelete = null;
+  renderList();
+}
+
+function confirmDeleteRecord(kind, id) {
+  state.pendingDelete = null;
+  deleteRecord(kind, id);
+}
+
 function deleteRecord(kind, id) {
-  if (!confirm("Delete this record?")) return;
   const previousList = db[kind] || [];
   db[kind] = (db[kind] || []).filter((row) => row.id !== id);
   if (!saveStore()) {
@@ -729,7 +772,7 @@ function deleteRecord(kind, id) {
   if (window.firebaseSync) window.firebaseSync.delete(kind, id);
 }
 
-function duplicateRecord(kind, id) {
+async function duplicateRecord(kind, id) {
   const record = (db[kind] || []).find((row) => row.id === id);
   if (!record) return;
   const copy = structuredCloneSafe(record);
@@ -737,6 +780,7 @@ function duplicateRecord(kind, id) {
   delete copy.createdAt;
   delete copy.updatedAt;
   applyNewNumber(kind, copy);
+  await ensureDocumentNumber(kind, copy);
   copy.status = defaultStatus(kind);
   if (!saveRecord(kind, copy)) return;
   render();
@@ -1889,13 +1933,33 @@ function applyNewNumber(kind, record) {
   if (kind === "warrantyCards") record.serialNo = generateWarrantySerial();
 }
 
+async function ensureDocumentNumber(kind, record) {
+  if (record.id) return;
+  const meta = DOCUMENTS[kind];
+  if (!meta) return;
+  if (navigator.onLine && window.firebaseSync && typeof window.firebaseSync.reserveNumber === "function") {
+    try {
+      const reserved = await window.firebaseSync.reserveNumber(kind);
+      if (reserved) {
+        record[meta.numberField] = reserved;
+        return;
+      }
+    } catch (error) {
+      console.warn("Could not reserve shared document number", error);
+    }
+  }
+  record[meta.numberField] = generateOfflineNumber(kind);
+}
+
 function generateQuotationNumber() {
+  if (!navigator.onLine) return generateOfflineNumber("quotations");
   const year = new Date().getFullYear();
   const count = (db.quotations || []).filter((row) => String(row.quotationNumber || "").includes("NTHS-" + year)).length + 1;
   return "NTHS-" + year + "-" + String(count).padStart(4, "0");
 }
 
 function generateInvoiceNumber() {
+  if (!navigator.onLine) return generateOfflineNumber("invoices");
   const year = new Date().getFullYear();
   const nextYear = String(year + 1).slice(2);
   const prefix = year + "-" + nextYear;
@@ -1904,9 +1968,45 @@ function generateInvoiceNumber() {
 }
 
 function generateWarrantySerial() {
+  if (!navigator.onLine) return generateOfflineNumber("warrantyCards");
   const year = new Date().getFullYear();
   const count = (db.warrantyCards || []).filter((row) => String(row.serialNo || "").includes("WC-" + year)).length + 1;
   return "WC-" + year + "-" + String(count).padStart(4, "0");
+}
+
+function generateOfflineNumber(kind) {
+  const year = new Date().getFullYear();
+  const sequence = nextLocalNumber(kind, year);
+  const device = getDeviceNumberId();
+  if (kind === "quotations") return `NTHS-${year}-OFF-${device}-${String(sequence).padStart(4, "0")}`;
+  if (kind === "invoices") return `${year}-${String(year + 1).slice(2)}/OFF-${device}-${String(sequence).padStart(3, "0")}`;
+  if (kind === "warrantyCards") return `WC-${year}-OFF-${device}-${String(sequence).padStart(4, "0")}`;
+  return `${year}-OFF-${device}-${sequence}`;
+}
+
+function nextLocalNumber(kind, year) {
+  let counters = {};
+  try { counters = JSON.parse(localStorage.getItem(NUMBER_COUNTER_KEY) || "{}"); }
+  catch { counters = {}; }
+  const key = `${kind}-${year}`;
+  const next = Math.max(1, Number(counters[key] || 0) + 1);
+  counters[key] = next;
+  try { localStorage.setItem(NUMBER_COUNTER_KEY, JSON.stringify(counters)); }
+  catch (error) { console.warn("Could not store local document counter", error); }
+  return next;
+}
+
+function getDeviceNumberId() {
+  try {
+    const existing = localStorage.getItem(DEVICE_ID_KEY);
+    if (existing) return existing;
+    const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const id = `${SITE_NUMBER_CODE}-${suffix}`;
+    localStorage.setItem(DEVICE_ID_KEY, id);
+    return id;
+  } catch {
+    return SITE_NUMBER_CODE;
+  }
 }
 
 function defaultStatus(kind) {
