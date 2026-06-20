@@ -1,6 +1,8 @@
 const STORAGE_KEY = "newtech-edocument-generator-v1";
 const NUMBER_COUNTER_KEY = "newtech-edocument-number-counters-v1";
 const DEVICE_ID_KEY = "newtech-edocument-device-id-v1";
+const PASSCODE_KEY = "newtech-edocument-passcode-v1";
+const PASSCODE_SESSION_KEY = "newtech-edocument-unlocked-v1";
 const SITE_NUMBER_CODE = "MDOC";
 
 const COMPANY_PROFILE = {
@@ -126,6 +128,9 @@ const contentEl = document.getElementById("content");
 const pageTitleEl = document.getElementById("pageTitle");
 const newBtn = document.getElementById("newBtn");
 const backBtn = document.getElementById("backBtn");
+const lockBtn = document.getElementById("lockBtn");
+const pinScreen = document.getElementById("pinScreen");
+let appBooted = false;
 
 document.querySelectorAll(".nav-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -144,8 +149,232 @@ backBtn.addEventListener("click", () => {
   state.editingId = null;
   render();
 });
-render();
-startSharedDocumentSync();
+if (lockBtn) lockBtn.addEventListener("click", lockApp);
+
+initPasscodeGate();
+
+function bootApp() {
+  document.body.classList.remove("locked");
+  if (pinScreen) pinScreen.hidden = true;
+  if (lockBtn) lockBtn.hidden = false;
+  render();
+  if (!appBooted) {
+    appBooted = true;
+    startSharedDocumentSync();
+  }
+}
+
+function initPasscodeGate() {
+  if (!pinScreen) {
+    bootApp();
+    return;
+  }
+  if (isPasscodeUnlocked()) {
+    bootApp();
+    return;
+  }
+  document.body.classList.add("locked");
+  pinScreen.hidden = false;
+  if (getPasscodeConfig()) renderPasscodeLogin();
+  else renderPasscodeSetup();
+}
+
+function isValidPasscode(value) {
+  return /^\d{6,8}$/.test(String(value || ""));
+}
+
+function getPasscodeConfig() {
+  try {
+    const raw = localStorage.getItem(PASSCODE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.salt || !parsed.hash || !parsed.firebaseUserId || !parsed.email) return null;
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+}
+
+function isPasscodeUnlocked() {
+  try {
+    return sessionStorage.getItem(PASSCODE_SESSION_KEY) === "1";
+  } catch (error) {
+    return false;
+  }
+}
+
+function setPasscodeUnlocked(value) {
+  try {
+    if (value) sessionStorage.setItem(PASSCODE_SESSION_KEY, "1");
+    else sessionStorage.removeItem(PASSCODE_SESSION_KEY);
+  } catch (error) {
+    // Some older private browsers block sessionStorage; keep the gate usable.
+  }
+}
+
+function renderPasscodeSetup(message) {
+  pinScreen.innerHTML = `
+    <div class="pin-card">
+      <div class="pin-logo"><img src="assets/logo.png" alt="NewTech Home Solutions"></div>
+      <p class="pin-eyebrow">First Login Required</p>
+      <h2>Verify With Firebase</h2>
+      <p class="pin-copy">First time setup needs your Firebase email login. After this, this device can open offline with the access code.</p>
+      <form id="pinSetupForm" class="pin-form">
+        <label for="firebaseEmail">Firebase Email</label>
+        <input id="firebaseEmail" class="pin-email" type="email" autocomplete="username" placeholder="you@example.com" required>
+        <label for="firebasePassword">Firebase Password</label>
+        <input id="firebasePassword" class="pin-password" type="password" autocomplete="current-password" placeholder="Firebase password" required>
+        <label for="pinCreate">New Code</label>
+        <input id="pinCreate" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="new-password" placeholder="6-8 digits" required>
+        <label for="pinConfirm">Confirm Code</label>
+        <input id="pinConfirm" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="new-password" placeholder="Repeat code" required>
+        <p class="pin-error" id="pinError">${message ? escapeHtml(message) : ""}</p>
+        <button class="btn btn-primary" id="firebaseSetupBtn" type="submit">Verify & Save Code</button>
+      </form>
+    </div>`;
+  const form = document.getElementById("pinSetupForm");
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!navigator.onLine) {
+      renderPasscodeSetup("First login needs internet. After setup, offline code will work.");
+      return;
+    }
+    const email = document.getElementById("firebaseEmail").value.trim();
+    const password = document.getElementById("firebasePassword").value;
+    const first = document.getElementById("pinCreate").value.trim();
+    const second = document.getElementById("pinConfirm").value.trim();
+    if (!isValidPasscode(first)) {
+      renderPasscodeSetup("Code must be 6-8 digits.");
+      return;
+    }
+    if (first !== second) {
+      renderPasscodeSetup("Both codes must match.");
+      return;
+    }
+    const btn = document.getElementById("firebaseSetupBtn");
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Verifying...";
+    try {
+      const user = await signInWithFirebaseEmail(email, password);
+      const salt = createPasscodeSalt();
+      const algorithm = hasSubtleCrypto() ? "sha256" : "fnv1a";
+      const hash = await digestPasscode(first, salt, algorithm);
+      localStorage.setItem(PASSCODE_KEY, JSON.stringify({
+        salt,
+        hash,
+        algorithm,
+        email: user.email || email,
+        firebaseUserId: user.uid,
+        createdAt: new Date().toISOString()
+      }));
+      setPasscodeUnlocked(true);
+      bootApp();
+      toast("Firebase verified. Offline access code saved.");
+    } catch (error) {
+      btn.disabled = false;
+      btn.textContent = original;
+      renderPasscodeSetup(firebaseLoginErrorMessage(error));
+    }
+  });
+  document.getElementById("firebaseEmail").focus();
+}
+
+function renderPasscodeLogin(message) {
+  const config = getPasscodeConfig();
+  const emailText = config && config.email ? `Authorized: ${escapeHtml(config.email)}` : "Use your saved access code.";
+  pinScreen.innerHTML = `
+    <div class="pin-card">
+      <div class="pin-logo"><img src="assets/logo.png" alt="NewTech Home Solutions"></div>
+      <p class="pin-eyebrow">Protected App</p>
+      <h2>Enter Access Code</h2>
+      <p class="pin-copy">${emailText}<br>Works offline on this device after first Firebase login.</p>
+      <form id="pinLoginForm" class="pin-form">
+        <label for="pinLogin">Access Code</label>
+        <input id="pinLogin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="current-password" placeholder="6-8 digits" required>
+        <p class="pin-error" id="pinError">${message ? escapeHtml(message) : ""}</p>
+        <button class="btn btn-primary" type="submit">Unlock</button>
+      </form>
+    </div>`;
+  const form = document.getElementById("pinLoginForm");
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const passcode = document.getElementById("pinLogin").value.trim();
+    const config = getPasscodeConfig();
+    if (!config || !isValidPasscode(passcode)) {
+      renderPasscodeLogin("Enter the 6-8 digit code.");
+      return;
+    }
+    const hash = await digestPasscode(passcode, config.salt, config.algorithm || "fnv1a");
+    if (hash !== config.hash) {
+      renderPasscodeLogin("Wrong code. Try again.");
+      return;
+    }
+    setPasscodeUnlocked(true);
+    bootApp();
+  });
+  document.getElementById("pinLogin").focus();
+}
+
+function lockApp() {
+  setPasscodeUnlocked(false);
+  document.body.classList.add("locked");
+  if (pinScreen) {
+    pinScreen.hidden = false;
+    renderPasscodeLogin();
+  }
+}
+
+function hasSubtleCrypto() {
+  return !!(window.crypto && window.crypto.subtle && window.TextEncoder);
+}
+
+async function signInWithFirebaseEmail(email, password) {
+  if (!window.firebaseSync || typeof window.firebaseSync.signInWithEmail !== "function") {
+    throw new Error("Firebase login service is still loading. Try again.");
+  }
+  return window.firebaseSync.signInWithEmail(email, password);
+}
+
+function firebaseLoginErrorMessage(error) {
+  const code = error && error.code ? error.code : "";
+  if (code === "auth/user-not-found" || code === "auth/wrong-password" || code === "auth/invalid-credential") {
+    return "Firebase email or password is wrong.";
+  }
+  if (code === "auth/too-many-requests") return "Too many attempts. Try again later.";
+  if (code === "auth/network-request-failed") return "Network error. Check internet and try again.";
+  return error && error.message ? error.message : "Firebase login failed.";
+}
+
+function createPasscodeSalt() {
+  if (window.crypto && window.crypto.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  return String(Date.now()) + String(Math.random()).slice(2);
+}
+
+async function digestPasscode(passcode, salt, algorithm) {
+  const input = String(salt || "") + ":" + String(passcode || "");
+  if (algorithm === "sha256" && hasSubtleCrypto()) {
+    const bytes = new TextEncoder().encode(input);
+    const digest = await window.crypto.subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  return legacyPasscodeHash(input);
+}
+
+function legacyPasscodeHash(input) {
+  let hash = 2166136261;
+  for (let round = 0; round < 4; round += 1) {
+    for (let i = 0; i < input.length; i += 1) {
+      hash ^= input.charCodeAt(i) + round;
+      hash = Math.imul(hash, 16777619);
+    }
+  }
+  return ("00000000" + (hash >>> 0).toString(16)).slice(-8);
+}
 
 function loadStore() {
   const empty = { quotations: [], invoices: [], warrantyCards: [] };

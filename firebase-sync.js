@@ -32,6 +32,7 @@ const FIREBASE_CONFIG = {
 // ============================================================
 
 const SYNC_QUEUE_KEY = 'newtech-sync-queue-v1';
+const DEVICE_AUTH_KEY = 'newtech-edocument-passcode-v1';
 const NUMBER_FIELDS = {
   quotations: 'quotationNumber',
   invoices: 'invoiceNumber',
@@ -114,17 +115,12 @@ async function initFirebase() {
   if (_firestore) return _firestore;
   if (!navigator.onLine) return null;
   try {
-    await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-    await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js');
-    await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js');
-    if (!window.firebase) throw new Error('Firebase SDK load nahi hua');
-    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    _auth = firebase.auth();
-    if (!_auth.currentUser) {
-      try { await _auth.signInAnonymously(); }
-      catch (authError) { console.warn('[Firebase] Anonymous auth failed:', authError.message); }
+    await ensureFirebaseSdk();
+    const user = await waitForAuthReady();
+    if (!user && !hasDeviceAuthorization()) {
+      console.warn('[Firebase] Email login required before Firestore sync.');
+      return null;
     }
-    _firestore = firebase.firestore();
     console.log('[Firebase] ✅ Connected to Firestore');
     return _firestore;
   } catch (e) {
@@ -158,6 +154,52 @@ async function runOperation(op, db) {
   } else if (op.type === 'delete') {
     await ref.delete();
   }
+}
+
+async function ensureFirebaseSdk() {
+  await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+  await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js');
+  await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js');
+  if (!window.firebase) throw new Error('Firebase SDK load nahi hua');
+  if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+  _auth = firebase.auth();
+  _firestore = firebase.firestore();
+  return _firestore;
+}
+
+function waitForAuthReady() {
+  if (!_auth) return Promise.resolve(null);
+  return new Promise(resolve => {
+    let done = false;
+    let unsubscribe = null;
+    const finish = user => {
+      if (done) return;
+      done = true;
+      if (unsubscribe) unsubscribe();
+      resolve(user || _auth.currentUser || null);
+    };
+    unsubscribe = _auth.onAuthStateChanged(finish);
+    setTimeout(() => finish(_auth.currentUser), 1800);
+  });
+}
+
+function hasDeviceAuthorization() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DEVICE_AUTH_KEY) || 'null');
+    return !!(parsed && parsed.firebaseUserId && parsed.email && parsed.hash);
+  } catch {
+    return false;
+  }
+}
+
+async function signInWithEmail(email, password) {
+  if (!navigator.onLine) throw new Error('First Firebase login needs internet.');
+  await ensureFirebaseSdk();
+  const credential = await _auth.signInWithEmailAndPassword(email, password);
+  return {
+    uid: credential.user.uid,
+    email: credential.user.email || email
+  };
 }
 
 function notifySyncedRecord(collection, id, data) {
@@ -381,6 +423,7 @@ if (document.readyState === 'loading') {
 window.firebaseSync = {
   save:            saveToFirebase,
   delete:          deleteFromFirebase,
+  signInWithEmail,
   configure,
   subscribeCollections,
   reserveNumber,

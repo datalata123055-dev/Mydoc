@@ -1,4 +1,4 @@
-var CACHE_NAME = "edocument-offline-v8";
+var CACHE_NAME = "edocument-offline-v10";
 var APP_SHELL = [
   "./",
   "./index.html",
