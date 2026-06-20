@@ -110,10 +110,23 @@ async function initFirebase() {
 async function runOperation(op, db) {
   const ref = db.collection(op.collection).doc(op.id);
   if (op.type === 'upsert') {
-    await ref.set(op.data, { merge: true });
+    await ref.set(cleanForFirestore(op.data), { merge: true });
   } else if (op.type === 'delete') {
     await ref.delete();
   }
+}
+
+function cleanForFirestore(value) {
+  if (Array.isArray(value)) return value.map(cleanForFirestore).filter(item => item !== undefined);
+  if (value && typeof value === 'object') {
+    const cleaned = {};
+    Object.keys(value).forEach(key => {
+      const next = cleanForFirestore(value[key]);
+      if (next !== undefined) cleaned[key] = next;
+    });
+    return cleaned;
+  }
+  return value === undefined ? undefined : value;
 }
 
 // --- Sync pending queue ---
@@ -161,7 +174,7 @@ async function syncPendingQueue() {
 // --- Save / Delete (app.js se call hota hai) ---
 
 async function saveToFirebase(collection, id, data) {
-  const op = { type: 'upsert', collection, id, data };
+  const op = { type: 'upsert', collection, id, data: cleanForFirestore(data) };
   if (navigator.onLine) {
     try {
       const db = await initFirebase();

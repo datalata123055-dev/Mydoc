@@ -1,4 +1,4 @@
-var CACHE_NAME = "edocument-offline-v3";
+var CACHE_NAME = "edocument-offline-v4";
 var APP_SHELL = [
   "./",
   "./index.html",
@@ -19,6 +19,14 @@ var APP_SHELL = [
   "./assets/icon-192.png",
   "./assets/icon-512.png"
 ];
+
+function isFreshAsset(request) {
+  var url = new URL(request.url);
+  return url.pathname.endsWith("/app.js") ||
+    url.pathname.endsWith("/firebase-sync.js") ||
+    url.pathname.endsWith("/offline-indicator.js") ||
+    url.pathname.endsWith("/styles.css");
+}
 
 self.addEventListener("install", function (event) {
   event.waitUntil(
@@ -60,6 +68,22 @@ self.addEventListener("fetch", function (event) {
         return response;
       }).catch(function () {
         return caches.match("./index.html");
+      })
+    );
+    return;
+  }
+
+  if (isFreshAsset(request)) {
+    event.respondWith(
+      fetch(request).then(function (response) {
+        if (!response || !response.ok || response.type !== "basic") return response;
+        var copy = response.clone();
+        caches.open(CACHE_NAME).then(function (cache) {
+          cache.put(request, copy);
+        });
+        return response;
+      }).catch(function () {
+        return caches.match(request);
       })
     );
     return;
