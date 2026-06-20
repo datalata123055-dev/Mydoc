@@ -144,9 +144,6 @@ backBtn.addEventListener("click", () => {
   state.editingId = null;
   render();
 });
-document.getElementById("exportBtn").addEventListener("click", exportJson);
-document.getElementById("importInput").addEventListener("change", importJson);
-
 render();
 startSharedDocumentSync();
 
@@ -1786,53 +1783,6 @@ function imageToDataUrl(src, label) {
     image.onerror = () => resolve("");
     image.src = src;
   });
-}
-
-function exportJson() {
-  const payload = {
-    exportedAt: new Date().toISOString(),
-    source: "NewTech eDocument Generator",
-    ...db
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "newtech-edocument-records.json";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
-function importJson(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const parsed = JSON.parse(String(reader.result || "{}"));
-      ["quotations", "invoices", "warrantyCards"].forEach((key) => {
-        const incoming = Array.isArray(parsed[key]) ? parsed[key] : [];
-        const current = db[key] || [];
-        const byId = new Map(current.map((row) => [row.id, row]));
-        incoming.forEach((row) => {
-          const id = row.id || uid();
-          byId.set(id, { ...row, id });
-        });
-        db[key] = [...byId.values()];
-      });
-      saveStore();
-      render();
-      toast("JSON imported.");
-    } catch (error) {
-      console.error(error);
-      toast("Import failed. Please select a valid JSON file.");
-    } finally {
-      event.target.value = "";
-    }
-  };
-  reader.readAsText(file);
 }
 
 function defaultCommercialRecord(kind) {
