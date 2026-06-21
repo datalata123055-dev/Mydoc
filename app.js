@@ -13,7 +13,7 @@ const COMPANY_PROFILE = {
   address: "E-386 Vashist Farm, Hari Nagar Part 2, Badarpur, New Delhi - 110044, Near Earth Nursery",
   officeAddress: "F-1, Hari Nagar Part-2, Near Lohia Pull/Eco Park, Badarpur, New Delhi-110044",
   email: "homesolutionsnewtech@gmail.com",
-  website: "https://www.newtechflyscreens.in",
+  website: "https://newtechhomesolutions.in | https://www.newtechflyscreens.in",
   contacts: ["+91 9315739299", "+91 9354831931"],
   gstNumber: "07AATFN5177C1ZY",
   bankDetails: {
