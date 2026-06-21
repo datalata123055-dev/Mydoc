@@ -7,17 +7,17 @@ const SITE_NUMBER_CODE = "MDOC";
 
 const COMPANY_PROFILE = {
   name: "NewTech Home Solutions",
-  tagline: "Supreme Insect Protection Systems",
+  tagline: "Unit of NewTech Fly Screens",
   logo: "assets/logo.png",
   stamp: "assets/company-stamp.png",
   address: "E-386 Vashist Farm, Hari Nagar Part 2, Badarpur, New Delhi - 110044, Near Earth Nursery",
-  officeAddress: "E-386 Vashist Farm, Hari Nagar Part 2, Badarpur, New Delhi - 110044, Near Earth Nursery",
+  officeAddress: "F-1, Hari Nagar Part-2, Near Lohia Pull/Eco Park, Badarpur, New Delhi-110044",
   email: "homesolutionsnewtech@gmail.com",
-  website: "https://newtechhomesolutions.in",
+  website: "https://www.newtechflyscreens.in",
   contacts: ["+91 9315739299", "+91 9354831931"],
   gstNumber: "07AATFN5177C1ZY",
   bankDetails: {
-    accountName: "NewTech Home Solutions",
+    accountName: "NewTech Fly Screens",
     bankName: "AXIS BANK",
     accountNo: "922020011452055",
     ifsc: "UTIB0000552"
@@ -25,20 +25,21 @@ const COMPANY_PROFILE = {
   quotationTerms: [
     "Minimum Chargeable area is 1.02 square meter or 11 Sq.Ft. for all products.",
     "50% advance to be paid along with order, balance after installation.",
-    "Cheques & NEFT to be issued in favor of NewTech Home Solutions.",
+    "Cheques & NEFT to be issued in favor of NewTech Fly Screens.",
     "Bank Details - AXIS BANK (IFSC - UTIB0000552) A/c No. 922020011452055",
     "Products once produced will neither be cancelled or exchanged or rectified.",
     "Calculation of Area of all products will be in SLAB of 6\" for both Width & Height.",
     "Warranty for the period of 5 Years for Manufacturing defect except Net, from date of delivery.",
     "5 Years Guarantee of Mesh for Natural climate wear-tear only.",
+    "Nominal amt. of Rs.500/- would be charged as Visit charge for improper cleaning complaints or any physical damages.",
     "All disputes subject to Delhi Jurisdiction."
   ],
   invoiceTerms: [
-    "Cheques & NEFT to be issued in favor of NewTech Home Solutions.",
+    "Cheques & NEFT to be issued in favor of NewTech Fly Screens.",
     "Products once produced will neither be cancelled or exchanged or rectified.",
     "Bank Details - AXIS BANK (IFSC - UTIB0000552) A/c No. 922020011452055",
     "Warranty for the period of 5 years for Manufacturing defect except Net, (For Pleated Mesh Only).",
-    "Nominal amount of Rs. 500/- would be charged as technician visit, during warranty period.",
+    "Nominal amt. of Rs.500/- would be charged as Visit charge for improper cleaning complaints or any physical damages.",
     "24% interest would be charged extra for delay payment.",
     "All disputes subject to Delhi Jurisdiction."
   ],
@@ -108,6 +109,11 @@ const TAX_OPTIONS = [
   { label: "GST 12%", value: 12 },
   { label: "GST 18%", value: 18 },
   { label: "Custom Tax", value: "custom" }
+];
+const TAX_TYPE_OPTIONS = [
+  { label: "IGST", value: "igst" },
+  { label: "CGST + SGST", value: "cgst_sgst" },
+  { label: "Self / Custom", value: "self" }
 ];
 
 let state = {
@@ -643,9 +649,8 @@ function renderCommercialEditor(kind, id) {
           <div class="field"><label>City</label><input name="city" value="${escapeAttr(record.customerDetails.city)}"></div>
           <div class="field"><label>State</label><input name="state" value="${escapeAttr(record.customerDetails.state)}"></div>
           <div class="field"><label>Country</label><input name="country" value="${escapeAttr(record.customerDetails.country || "India")}"></div>
-          ${isInvoice
-            ? `<div class="field"><label>Reference Quotation</label><input name="referenceNumber" value="${escapeAttr(record.referenceNumber || "")}"></div>`
-            : `<div class="field"><label>Installation Timeline</label><input name="installationTime" value="${escapeAttr(record.customerDetails.installationTime || "Within 4 working days")}"></div>`}
+          ${isInvoice ? `<div class="field"><label>Reference Quotation</label><input name="referenceNumber" value="${escapeAttr(record.referenceNumber || "")}"></div>` : ""}
+          <div class="field"><label>Installation Timeline</label><input name="installationTime" value="${escapeAttr(record.customerDetails.installationTime || "Within 4 working days")}"></div>
           <div class="field full"><label>Installation Address</label><textarea name="address">${escapeHtml(record.customerDetails.installationAddress)}</textarea></div>
           <div class="field full"><label>Notes</label><textarea name="notes">${escapeHtml(record.customerDetails.notes)}</textarea></div>
         </div>
@@ -665,9 +670,13 @@ function renderCommercialEditor(kind, id) {
         <h2>GST and Status</h2>
         <div class="form-grid">
           ${isInvoice ? `<div class="field"><label>HSN/SAC Code</label><input name="hsnSac" value="${escapeAttr(record.hsnSac || "7314")}"></div>` : ""}
+          <div class="field"><label>GST Type</label><select name="taxType">${TAX_TYPE_OPTIONS.map((item) => `<option value="${item.value}" ${(record.taxType || (isInvoice ? "cgst_sgst" : "igst")) === item.value ? "selected" : ""}>${item.label}</option>`).join("")}</select></div>
           <div class="field"><label>Tax/GST</label><select name="taxMode">${TAX_OPTIONS.map((item) => `<option value="${item.value}" ${String(record.taxMode) === String(item.value) ? "selected" : ""}>${item.label}</option>`).join("")}</select></div>
           <div class="field"><label>Custom Tax %</label><input name="customTaxRate" type="number" step="0.01" value="${escapeAttr(record.customTaxRate || 0)}"></div>
+          <div class="field"><label>Self Tax Label</label><input name="customTaxLabel" value="${escapeAttr(record.customTaxLabel || "")}"></div>
           <div class="field"><label>Extra Discount</label><input name="discount" type="number" step="0.01" value="${escapeAttr(record.discount || 0)}"></div>
+          <div class="field"><label>Advance</label><input name="advanceAmount" value="${escapeAttr(record.advanceAmount || "")}"></div>
+          <div class="field"><label>Outstanding</label><input name="outstandingAmount" value="${escapeAttr(record.outstandingAmount || "")}"></div>
           <div class="field"><label>Authorized Signatory</label><input name="signatory" value="${escapeAttr(record.signatory || COMPANY_PROFILE.name)}"></div>
           <div class="field"><label>Status</label><select name="status">${meta.statuses.map((status) => `<option value="${status}" ${record.status === status ? "selected" : ""}>${capitalize(status)}</option>`).join("")}</select></div>
         </div>
@@ -753,12 +762,14 @@ function refreshCommercialTotals() {
     <div class="total-item"><span>Products</span><strong>${currency(doc.productTotal)}</strong></div>
     <div class="total-item"><span>Install + Delivery</span><strong>${currency(doc.installation + doc.delivery)}</strong></div>
     <div class="total-item"><span>Discount</span><strong>${currency(doc.discount)}</strong></div>
-    <div class="total-item"><span>Tax (${doc.taxRate}%)</span><strong>${currency(doc.taxAmount)}</strong></div>
+    <div class="total-item"><span>${taxSummaryLabel(doc)}</span><strong>${currency(doc.taxAmount)}</strong></div>
     <div class="total-item grand"><span>Total</span><strong>${currency(doc.total)}</strong></div>
   `;
 
   const customTax = form.elements.customTaxRate;
   customTax.disabled = form.elements.taxMode.value !== "custom";
+  const customTaxLabel = form.elements.customTaxLabel;
+  if (customTaxLabel) customTaxLabel.disabled = form.elements.taxType.value !== "self";
 }
 
 function commercialFromForm() {
@@ -777,7 +788,7 @@ function commercialFromForm() {
       city: sanitize(form.elements.city.value),
       state: sanitize(form.elements.state.value),
       country: sanitize(form.elements.country.value) || "India",
-      installationTime: kind === "quotations" ? sanitize(form.elements.installationTime.value) : "",
+      installationTime: sanitize(form.elements.installationTime.value),
       installationAddress: sanitize(form.elements.address.value),
       notes: sanitize(form.elements.notes.value)
     },
@@ -785,9 +796,13 @@ function commercialFromForm() {
     phone: sanitize(form.elements.phone.value),
     email: sanitize(form.elements.email.value),
     products: [...document.querySelectorAll("[data-product-row]")].map(productFromRow),
+    taxType: sanitize(form.elements.taxType.value),
     taxMode: form.elements.taxMode.value,
     customTaxRate: num(form.elements.customTaxRate.value),
+    customTaxLabel: sanitize(form.elements.customTaxLabel.value),
     discount: num(form.elements.discount.value),
+    advanceAmount: sanitize(form.elements.advanceAmount.value),
+    outstandingAmount: sanitize(form.elements.outstandingAmount.value),
     signatory: sanitize(form.elements.signatory.value),
     status: form.elements.status.value,
     companyProfile: COMPANY_PROFILE
@@ -846,6 +861,57 @@ function calculateCommercial(kind, doc) {
     tax: taxAmount,
     total
   };
+}
+
+function taxRateText(rate) {
+  const value = num(rate);
+  return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function documentTaxType(record) {
+  return record.taxType || (record.documentType === "invoices" ? "cgst_sgst" : "igst");
+}
+
+function taxSummaryLabel(record) {
+  const rate = taxRateText(record.taxRate);
+  if (documentTaxType(record) === "cgst_sgst") return "CGST + SGST @ " + rate + "%";
+  if (documentTaxType(record) === "self") return (record.customTaxLabel || "Self Tax") + " @ " + rate + "%";
+  return "IGST @ " + rate + "%";
+}
+
+function taxRowsForPdf(record, columnCount) {
+  const makeRow = (label, amount) => {
+    const row = Array(columnCount).fill("");
+    row[1] = label;
+    row[columnCount - 1] = currency2(amount);
+    return row;
+  };
+  const rate = num(record.taxRate);
+  const amount = num(record.taxAmount);
+  if (documentTaxType(record) === "cgst_sgst") {
+    return [
+      makeRow("CGST @ " + taxRateText(rate / 2) + "%", amount / 2),
+      makeRow("SGST @ " + taxRateText(rate / 2) + "%", amount / 2)
+    ];
+  }
+  return [makeRow(taxSummaryLabel(record), amount)];
+}
+
+function taxRowsForHtml(record) {
+  const rate = num(record.taxRate);
+  const amount = num(record.taxAmount);
+  if (documentTaxType(record) === "cgst_sgst") {
+    return [
+      { label: "CGST @ " + taxRateText(rate / 2) + "%", amount: amount / 2 },
+      { label: "SGST @ " + taxRateText(rate / 2) + "%", amount: amount / 2 }
+    ];
+  }
+  return [{ label: taxSummaryLabel(record), amount }];
+}
+
+function paymentText(value) {
+  const text = String(value || "").trim();
+  return text || "/-";
 }
 
 function calculateItem(item) {
@@ -1224,8 +1290,10 @@ function printableHtml(kind, sourceRecord) {
         <tr><th>Installation + Delivery</th><td>${currency(record.installation + record.delivery)}</td></tr>
         <tr><th>Subtotal</th><td>${currency(record.subtotal)}</td></tr>
         <tr><th>Discount</th><td>-${currency(record.discount)}</td></tr>
-        <tr><th>GST @ ${record.taxRate}%</th><td>${currency(record.taxAmount)}</td></tr>
+        ${taxRowsForHtml(record).map((row) => `<tr><th>${escapeHtml(row.label)}</th><td>${currency(row.amount)}</td></tr>`).join("")}
         <tr><th>Total Payable</th><td>${currency(Math.round(record.total))}</td></tr>
+        <tr><th>Advance</th><td>${escapeHtml(paymentText(record.advanceAmount))}</td></tr>
+        <tr><th>Outstanding</th><td>${escapeHtml(paymentText(record.outstandingAmount))}</td></tr>
       </tbody>
     </table>
     <p><strong>Amount in words:</strong> ${amountInWords(Math.round(record.total))} Rupees Only.</p>
@@ -1306,7 +1374,7 @@ function printableHtml(kind, sourceRecord) {
     <div class="box">
       <strong>No.:</strong> ${escapeHtml(number)}<br>
       <strong>Date:</strong> ${escapeHtml(date)}<br>
-      ${kind === "quotations" ? `<strong>Installation:</strong> ${escapeHtml(customer.installationTime || "Within 4 working days")}<br>` : ""}
+      ${!isWarranty ? `<strong>Installation:</strong> ${escapeHtml(customer.installationTime || "Within 4 working days")}<br>` : ""}
       ${kind === "invoices" ? `<strong>Reference:</strong> ${escapeHtml(record.referenceNumber || "")}<br>` : ""}
       <strong>Status:</strong> ${escapeHtml(capitalize(record.status || defaultStatus(kind)))}
     </div>
@@ -1495,7 +1563,7 @@ async function buildQuotationPdf(record) {
     ["", "Sub Total", "", "", "", currency2(record.subtotal)],
     ...(record.discount > 0 ? [["", "Discount (-)", "", "", "", "-" + currency2(record.discount)]] : []),
     ["", "Taxable Amount", "", "", "", currency2(record.taxable)],
-    ["", "IGST @ " + record.taxRate + "%", "", "", "", currency2(record.taxAmount)],
+    ...taxRowsForPdf(record, 6),
     ["", "R/O", "", "", "", roundoff ? currency2(roundoff) : ""]
   ];
 
@@ -1542,8 +1610,8 @@ async function buildQuotationPdf(record) {
   finalY += 3;
   doc.setFontSize(8.5);
   doc.setFont("helvetica", "bold");
-  doc.text("Advance : /-", margin, finalY);
-  doc.text("Outstanding : /-", margin, finalY + 5);
+  doc.text("Advance : " + paymentText(record.advanceAmount), margin, finalY);
+  doc.text("Outstanding : " + paymentText(record.outstandingAmount), margin, finalY + 5);
   await addPdfSignature(doc, finalY, record.signatory || COMPANY_PROFILE.name);
   addPdfFooter(doc);
   return doc;
@@ -1631,7 +1699,6 @@ async function buildInvoicePdf(record) {
   while (productRows.length < 6) productRows.push(["", "", "", "", "", "", ""]);
 
   const totalQuantity = record.products.reduce((sum, item) => sum + num(item.quantity), 0);
-  const halfTax = record.taxAmount / 2;
   const detailRowCount = productRows.length;
   const tableRows = [
     ...productRows,
@@ -1640,8 +1707,7 @@ async function buildInvoicePdf(record) {
     ["", "Sub Total", "", "", "", "", currency2(record.subtotal)],
     ...(record.discount > 0 ? [["", "Discount (-)", "", "", "", "", "-" + currency2(record.discount)]] : []),
     ["", "Taxable Amount", "", "", "", "", currency2(record.taxable)],
-    ["", "CGST @ " + record.taxRate / 2 + "%", "", "", "", "", currency2(halfTax)],
-    ["", "SGST @ " + record.taxRate / 2 + "%", "", "", "", "", currency2(halfTax)]
+    ...taxRowsForPdf(record, 7)
   ];
   const columnStyles = {};
   widths.forEach((width, index) => {
@@ -1714,7 +1780,12 @@ async function buildInvoicePdf(record) {
     doc.text(lines, margin + 2, finalY);
     finalY += lines.length * 4;
   });
-  await addPdfSignature(doc, finalY + 3, record.signatory || COMPANY_PROFILE.name);
+  finalY += 3;
+  doc.setFontSize(8.5);
+  doc.setFont("helvetica", "bold");
+  doc.text("Advance : " + paymentText(record.advanceAmount), margin, finalY);
+  doc.text("Outstanding : " + paymentText(record.outstandingAmount), margin, finalY + 5);
+  await addPdfSignature(doc, finalY + 8, record.signatory || COMPANY_PROFILE.name);
   addPdfFooter(doc);
   return doc;
 }
@@ -2021,12 +2092,16 @@ function defaultCommercialRecord(kind) {
     [meta.dateField]: todayISO(),
     customerDetails: {
       country: "India",
-      installationTime: kind === "quotations" ? "Within 4 working days" : ""
+      installationTime: "Within 4 working days"
     },
     products: [emptyProduct()],
+    taxType: kind === "invoices" ? "cgst_sgst" : "igst",
     taxMode: 18,
     customTaxRate: 0,
+    customTaxLabel: "",
     discount: 0,
+    advanceAmount: "",
+    outstandingAmount: "",
     signatory: COMPANY_PROFILE.name,
     status: defaultStatus(kind),
     companyProfile: COMPANY_PROFILE
@@ -2052,15 +2127,19 @@ function normalizeCommercialRecord(kind, record) {
       city: "",
       state: "",
       country: "India",
-      installationTime: kind === "quotations" ? "Within 4 working days" : "",
+      installationTime: "Within 4 working days",
       installationAddress: "",
       notes: "",
       ...(record.customerDetails || {})
     },
     products: Array.isArray(record.products) ? record.products : [emptyProduct()],
+    taxType: record.taxType || (kind === "invoices" ? "cgst_sgst" : "igst"),
     taxMode: record.taxMode === undefined || record.taxMode === null ? 18 : record.taxMode,
     customTaxRate: record.customTaxRate || 0,
+    customTaxLabel: record.customTaxLabel || "",
     discount: record.discount || 0,
+    advanceAmount: record.advanceAmount || "",
+    outstandingAmount: record.outstandingAmount || "",
     signatory: record.signatory || COMPANY_PROFILE.name,
     status: record.status || defaultStatus(kind),
     hsnSac: record.hsnSac || "7314",
